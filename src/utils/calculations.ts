@@ -3,11 +3,9 @@ import { PricingInputs, TierResult, DISCOUNT_TIERS, DiscountScope } from "@/type
 export function calculateTier(inputs: PricingInputs, discountRate: number): TierResult {
   const { basePrice, includedVisits, actualVisits, overagePrice, costPerVisit, discountScope } = inputs;
 
-  // Apply discount to base
   const baseDiscount = discountScope === "overages" ? 0 : discountRate;
   const monthlyBase = basePrice * (1 - baseDiscount);
 
-  // Overage
   let monthlyOverage = 0;
   if (actualVisits > includedVisits) {
     const excess = actualVisits - includedVisits;
@@ -42,60 +40,6 @@ export function calculateTier(inputs: PricingInputs, discountRate: number): Tier
 
 export function calculateAllTiers(inputs: PricingInputs): TierResult[] {
   return DISCOUNT_TIERS.map((rate) => calculateTier(inputs, rate));
-}
-
-export interface LTVRow {
-  label: string;
-  month1: number;
-  year1: number;
-  year2: number;
-  year3: number;
-}
-
-export function calculateLTV(inputs: PricingInputs, tierIndex: number): {
-  rows: LTVRow[];
-  paybackMonths: number;
-} {
-  const tier = calculateTier(inputs, DISCOUNT_TIERS[tierIndex]);
-  const { implementationCost, followUpCost } = inputs;
-  const oneTimeCosts = implementationCost + followUpCost;
-
-  const periods = [1, 12, 24, 36];
-  
-  const implRow: LTVRow = {
-    label: "One-Time Costs",
-    month1: -oneTimeCosts,
-    year1: -oneTimeCosts,
-    year2: -oneTimeCosts,
-    year3: -oneTimeCosts,
-  };
-
-  const recurringRow: LTVRow = {
-    label: "Recurring Profit",
-    month1: tier.monthlyProfit * 1,
-    year1: tier.monthlyProfit * 12,
-    year2: tier.monthlyProfit * 24,
-    year3: tier.monthlyProfit * 36,
-  };
-
-  const netRow: LTVRow = {
-    label: "Net Profit",
-    month1: recurringRow.month1 + implRow.month1,
-    year1: recurringRow.year1 + implRow.year1,
-    year2: recurringRow.year2 + implRow.year2,
-    year3: recurringRow.year3 + implRow.year3,
-  };
-
-  // Payback period
-  let paybackMonths = 0;
-  if (tier.monthlyProfit > 0) {
-    paybackMonths = Math.ceil(oneTimeCosts / tier.monthlyProfit);
-  }
-
-  return {
-    rows: [implRow, recurringRow, netRow],
-    paybackMonths,
-  };
 }
 
 export interface OverageScenario {
