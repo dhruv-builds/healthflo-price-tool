@@ -1,12 +1,15 @@
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { PricingInputs, DISCOUNT_LABELS, Currency, FxState } from "@/types/pricing";
-import { calculateAllTiers, calculateLTV, calculateOverageScenarios } from "./calculations";
-import { formatCurrency, formatPercent } from "./formatting";
+import { calculateAllTiers, calculateOverageScenarios } from "./calculations";
+import { formatPercent } from "./formatting";
 
 export function exportToExcel(inputs: PricingInputs, fxState: FxState) {
   const tiers = calculateAllTiers(inputs);
   const wb = XLSX.utils.book_new();
+
+  const implCost = inputs.implementationCostFirstHospital;
+  const followUpCost = Math.max(0, inputs.numberOfHospitals - 1) * inputs.followUpCostPerAdditional;
 
   const buildSheet = (currency: Currency, rate: number) => {
     const fmt = (v: number) => {
@@ -35,13 +38,14 @@ export function exportToExcel(inputs: PricingInputs, fxState: FxState) {
     rows.push(["Annual Profit", ...tiers.map((t) => fmt(t.annualProfit))]);
     rows.push([]);
 
-    // LTV
-    const ltv = calculateLTV(inputs, inputs.ltvScenarioIndex);
-    rows.push([`Contract LTV (${DISCOUNT_LABELS[inputs.ltvScenarioIndex]})`, "Month 1", "Year 1", "Year 2", "Year 3"]);
-    ltv.rows.forEach((r) => {
-      rows.push([r.label, fmt(r.month1), fmt(r.year1), fmt(r.year2), fmt(r.year3)]);
-    });
-    rows.push(["Payback Period", `${ltv.paybackMonths} months`]);
+    // Implementation Summary
+    rows.push(["Pricing Summary (Including Implementation)", ...DISCOUNT_LABELS]);
+    rows.push(["Annual Recurring Price", ...tiers.map((t) => fmt(t.annualPrice))]);
+    rows.push(["Implementation Cost (1st Hospital)", ...tiers.map(() => fmt(implCost))]);
+    if (inputs.numberOfHospitals > 1) {
+      rows.push([`Follow-up Costs (${inputs.numberOfHospitals - 1} Additional)`, ...tiers.map(() => fmt(followUpCost))]);
+    }
+    rows.push(["Total First-Year Cost", ...tiers.map((t) => fmt(t.annualPrice + implCost + followUpCost))]);
 
     return XLSX.utils.aoa_to_sheet(rows);
   };
@@ -55,13 +59,13 @@ export function exportToExcel(inputs: PricingInputs, fxState: FxState) {
     [],
     ["Parameter", "Value"],
     ["Template", inputs.template === "jeena_seekho" ? "Jeena Seekho Enterprise" : "India General Pricing"],
-    ["Expected Visits/Month", inputs.expectedVisits],
     ["Included Visits", inputs.includedVisits],
     ["Base Price/Month (₹)", inputs.basePrice],
     ["Overage Price/Visit (₹)", inputs.overagePrice],
     ["Cost to Company/Visit (₹)", inputs.costPerVisit],
-    ["Implementation Cost (₹)", inputs.implementationCost],
-    ["Follow-up Cost (₹)", inputs.followUpCost],
+    ["Number of Hospitals", inputs.numberOfHospitals],
+    ["Implementation Cost - First Hospital (₹)", inputs.implementationCostFirstHospital],
+    ["Follow-up Cost - Per Additional Hospital (₹)", inputs.followUpCostPerAdditional],
     ["Discount Scope", inputs.discountScope],
     ["Actual Visits", inputs.actualVisits],
     ["FX Rate (INR/USD)", fxState.rate],

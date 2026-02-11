@@ -6,15 +6,14 @@ export type TemplateName = "jeena_seekho" | "india_general";
 
 export interface PricingInputs {
   template: TemplateName;
-  expectedVisits: number;
   includedVisits: number;
   basePrice: number;
   overagePrice: number;
   costPerVisit: number;
-  implementationCost: number;
-  followUpCost: number;
+  numberOfHospitals: number;
+  implementationCostFirstHospital: number;
+  followUpCostPerAdditional: number;
   discountScope: DiscountScope;
-  ltvScenarioIndex: number; // 0=Base, 1=10%, 2=20%, etc.
   actualVisits: number;
   notes: string;
 }

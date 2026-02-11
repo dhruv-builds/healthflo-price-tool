@@ -1,4 +1,4 @@
-import { PricingInputs, DiscountScope, TemplateName, DISCOUNT_LABELS, Snapshot } from "@/types/pricing";
+import { PricingInputs, DiscountScope, TemplateName, Snapshot } from "@/types/pricing";
 import { getTemplateDefaults } from "@/utils/templates";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,16 +15,41 @@ interface SidebarProps {
   setInputs: (inputs: PricingInputs) => void;
 }
 
-function NumberInput({ label, value, onChange, prefix }: { label: string; value: number; onChange: (v: number) => void; prefix?: string }) {
+function formatIndian(val: number): string {
+  const str = Math.round(Math.abs(val)).toString();
+  if (str.length <= 3) return str;
+  let result = str.slice(-3);
+  let remaining = str.slice(0, -3);
+  while (remaining.length > 2) {
+    result = remaining.slice(-2) + "," + result;
+    remaining = remaining.slice(0, -2);
+  }
+  if (remaining.length > 0) result = remaining + "," + result;
+  return val < 0 ? "-" + result : result;
+}
+
+function NumberInput({ label, value, onChange, prefix, step }: { label: string; value: number; onChange: (v: number) => void; prefix?: string; step?: number }) {
+  const [focused, setFocused] = useState(false);
+  const [rawValue, setRawValue] = useState(value.toString());
+
+  useEffect(() => {
+    if (!focused) setRawValue(value.toString());
+  }, [value, focused]);
+
+  const displayValue = focused ? rawValue : formatIndian(value);
+
   return (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
       <div className="relative">
         {prefix && <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{prefix}</span>}
         <Input
-          type="number"
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
+          type={focused ? "number" : "text"}
+          value={displayValue}
+          step={step}
+          onFocus={() => { setFocused(true); setRawValue(value.toString()); }}
+          onBlur={() => { setFocused(false); onChange(Number(rawValue) || 0); }}
+          onChange={(e) => { setRawValue(e.target.value); if (focused) onChange(Number(e.target.value) || 0); }}
           className={`h-8 text-sm ${prefix ? "pl-6" : ""}`}
         />
       </div>
@@ -90,7 +115,6 @@ export function PricingSidebar({ inputs, setInputs }: SidebarProps) {
       <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Core Inputs</p>
 
       <div className="space-y-3 mb-4">
-        <NumberInput label="Expected Visits/Month" value={inputs.expectedVisits} onChange={(v) => update({ expectedVisits: v })} />
         <NumberInput label="Included Visits in Base" value={inputs.includedVisits} onChange={(v) => update({ includedVisits: v })} />
         <NumberInput label="Base Price/Month" value={inputs.basePrice} onChange={(v) => update({ basePrice: v })} prefix="₹" />
         <NumberInput label="Overage Price/Visit" value={inputs.overagePrice} onChange={(v) => update({ overagePrice: v })} prefix="₹" />
@@ -101,8 +125,9 @@ export function PricingSidebar({ inputs, setInputs }: SidebarProps) {
       <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">One-Time Costs</p>
 
       <div className="space-y-3 mb-4">
-        <NumberInput label="Implementation Cost" value={inputs.implementationCost} onChange={(v) => update({ implementationCost: v })} prefix="₹" />
-        <NumberInput label="Follow-up Cost" value={inputs.followUpCost} onChange={(v) => update({ followUpCost: v })} prefix="₹" />
+        <NumberInput label="Number of Hospitals" value={inputs.numberOfHospitals} onChange={(v) => update({ numberOfHospitals: Math.max(1, Math.round(v)) })} step={1} />
+        <NumberInput label="Implementation Cost (First Hospital)" value={inputs.implementationCostFirstHospital} onChange={(v) => update({ implementationCostFirstHospital: v })} prefix="₹" />
+        <NumberInput label="Follow-up Cost (Per Additional Hospital)" value={inputs.followUpCostPerAdditional} onChange={(v) => update({ followUpCostPerAdditional: v })} prefix="₹" />
       </div>
 
       <Separator className="my-2" />
@@ -120,18 +145,6 @@ export function PricingSidebar({ inputs, setInputs }: SidebarProps) {
             </SelectContent>
           </Select>
         </div>
-
-        <div className="space-y-1">
-          <Label className="text-xs">LTV Scenario</Label>
-          <Select value={inputs.ltvScenarioIndex.toString()} onValueChange={(v) => update({ ltvScenarioIndex: Number(v) })}>
-            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {DISCOUNT_LABELS.map((label, i) => (
-                <SelectItem key={i} value={i.toString()}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
       <Separator className="my-2" />
@@ -140,7 +153,7 @@ export function PricingSidebar({ inputs, setInputs }: SidebarProps) {
       <div className="space-y-3 mb-4">
         <NumberInput label="Actual Visits" value={inputs.actualVisits} onChange={(v) => update({ actualVisits: v })} />
         {inputs.actualVisits > inputs.includedVisits && (
-          <p className="text-xs text-warning font-medium">⚠ {(inputs.actualVisits - inputs.includedVisits).toLocaleString()} overage visits</p>
+          <p className="text-xs text-warning font-medium">⚠ {formatIndian(inputs.actualVisits - inputs.includedVisits)} overage visits</p>
         )}
       </div>
 

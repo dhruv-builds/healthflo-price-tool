@@ -9,7 +9,7 @@ import { PricingSidebar } from "@/components/pricing/PricingSidebar";
 import { PricingSummaryTable } from "@/components/pricing/PricingSummaryTable";
 import { OverageAnalysis } from "@/components/pricing/OverageAnalysis";
 import { UnitEconomicsTable } from "@/components/pricing/UnitEconomicsTable";
-import { ContractLTVTable } from "@/components/pricing/ContractLTVTable";
+import { ImplementationSummaryTable } from "@/components/pricing/ImplementationSummaryTable";
 
 const Index = () => {
   const [inputs, setInputs] = useState<PricingInputs>(getTemplateDefaults("jeena_seekho"));
@@ -34,7 +34,7 @@ const Index = () => {
             <PricingSummaryTable tiers={tiers} currency={currency} fxRate={fxState.rate} />
             <OverageAnalysis inputs={inputs} currency={currency} fxRate={fxState.rate} />
             <UnitEconomicsTable tiers={tiers} currency={currency} fxRate={fxState.rate} />
-            <ContractLTVTable inputs={inputs} currency={currency} fxRate={fxState.rate} />
+            <ImplementationSummaryTable inputs={inputs} tiers={tiers} currency={currency} fxRate={fxState.rate} />
           </div>
         </main>
       </div>
