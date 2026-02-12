@@ -1,98 +1,166 @@
 
 
-# HealthFlo Pricing Tool — Update Plan
+# Multi-User HealthFlo Pricing Tool with Auth & Client Versioning
 
-## Summary
-This update restructures one-time costs around a multi-hospital model, removes the Contract LTV section, adds Indian number formatting to inputs, collapses the overage section by default, and prevents search engine indexing.
-
----
-
-## Changes
-
-### 1. No-Index Meta Tag
-Add `<meta name="robots" content="noindex, nofollow" />` to `index.html` in the `<head>` section.
-
-### 2. Remove "Expected Visits/Month" Field
-- Remove `expectedVisits` from the `PricingInputs` interface in `types/pricing.ts`
-- Remove it from both templates in `utils/templates.ts`
-- Remove the input field from `PricingSidebar.tsx`
-- Remove the row from the Excel export in `utils/exportExcel.ts`
-
-### 3. Restructure One-Time Costs
-**Update `PricingInputs` type** to replace `implementationCost` and `followUpCost` with:
-- `numberOfHospitals: number` (default: 1)
-- `implementationCostFirstHospital: number` (default: 500000)
-- `followUpCostPerAdditional: number` (default: 100000)
-
-**Update templates** with matching defaults.
-
-**Update sidebar** to show three fields under "One-Time Costs": Number of Hospitals, Implementation Cost (First Hospital), Follow-up Cost (Per Additional Hospital).
-
-### 4. Indian Number Formatting on Inputs
-Replace the `NumberInput` component in `PricingSidebar.tsx` with a formatted version:
-- Display value with Indian comma grouping (e.g., `1,00,000`)
-- On focus, show raw number for easy editing
-- On blur, re-format with commas
-- Currency-prefixed fields show `₹` prefix
-
-### 5. Collapse Overage Analysis by Default
-Wrap the `OverageAnalysis` component in a collapsible container using the existing `Collapsible` component from Radix UI. It will:
-- Still only render when Actual Visits > Included Visits
-- Default to collapsed state
-- Show a "Show Overage Analysis" toggle button with a warning badge indicating overage count
-
-### 6. Remove Contract LTV Section
-- Delete `src/components/pricing/ContractLTVTable.tsx`
-- Remove its import and usage from `Index.tsx`
-- Remove the `calculateLTV` function from `utils/calculations.ts`
-- Remove the LTV Scenario dropdown from the sidebar (and `ltvScenarioIndex` from the type)
-- Remove LTV data from the Excel export
-
-### 7. New "Pricing Summary (Including Implementation)" Section
-Create a new component `src/components/pricing/ImplementationSummaryTable.tsx`:
-
-**Columns**: Base, 10% Off, 20% Off, 30% Off, 40% Off, 50% Off
-
-**Rows**:
-| Row | Logic |
-|-----|-------|
-| Annual Recurring Price | From each tier's `annualPrice` (discount applied) |
-| Implementation Cost (1st Hospital) | Constant across all columns |
-| Follow-up Costs (N-1 Additional Hospitals) | `(numberOfHospitals - 1) * followUpCostPerAdditional` — constant across all columns. Row hidden if hospitals = 1 |
-| **Total First-Year Cost** | Sum of above three rows. Bold with distinct background highlight |
-
-Discounts only affect the Annual Recurring Price row. Implementation and follow-up costs are constant.
-
-**Placement**: Below Unit Economics table, above where LTV used to be.
-
-### 8. Update Excel Export
-- Replace LTV tab data with the new Implementation Summary table
-- Update the Inputs tab to reflect new fields (Number of Hospitals, Implementation Cost First Hospital, Follow-up Cost Per Additional)
-- Remove Expected Visits and LTV-related rows
+## Overview
+Transform the current client-side pricing tool into a multi-user, database-backed application with Admin/Employee roles, a Client Library with version management, and enhanced Pricing Summary rows. Uses Lovable Cloud for authentication and database.
 
 ---
 
-## Technical Details
+## 1. Database Schema (Lovable Cloud / Supabase)
 
-### Files Modified
-| File | Change |
-|------|--------|
-| `index.html` | Add noindex meta tag |
-| `src/types/pricing.ts` | Remove `expectedVisits`, `ltvScenarioIndex`; rename cost fields; add `numberOfHospitals` |
-| `src/utils/templates.ts` | Update defaults for new field names |
-| `src/utils/calculations.ts` | Remove `calculateLTV` function |
-| `src/utils/exportExcel.ts` | Replace LTV with implementation summary; update inputs tab |
-| `src/components/pricing/PricingSidebar.tsx` | Rewrite `NumberInput` with Indian formatting; update fields |
-| `src/components/pricing/OverageAnalysis.tsx` | Wrap in Collapsible, default collapsed |
-| `src/pages/Index.tsx` | Remove ContractLTVTable, add ImplementationSummaryTable |
+### Tables
 
-### Files Created
+**profiles** — stores user role
+- `id` (uuid, FK to auth.users, PK)
+- `email` (text)
+- `created_at` (timestamptz)
+
+**user_roles** — stores roles separately (security best practice)
+- `id` (uuid, PK)
+- `user_id` (uuid, FK to auth.users, ON DELETE CASCADE)
+- `role` (app_role enum: 'admin', 'employee')
+- Unique constraint on (user_id, role)
+
+**clients** — each client/deal
+- `id` (uuid, PK)
+- `name` (text)
+- `created_by` (uuid, FK to auth.users)
+- `created_at` (timestamptz)
+
+**versions** — snapshots of pricing inputs per client
+- `id` (uuid, PK)
+- `client_id` (uuid, FK to clients, ON DELETE CASCADE)
+- `name` (text, e.g. "v1")
+- `data` (jsonb — stores entire PricingInputs object)
+- `notes` (text)
+- `created_by` (uuid, FK to auth.users)
+- `created_at` (timestamptz)
+
+### Trigger: Auto-assign role on signup
+A database trigger on `profiles` insert that checks if it is the first user. If yes, inserts 'admin' role; otherwise inserts 'employee' role into `user_roles`.
+
+### Seed Data
+Insert two default clients ("Jeena Seekho Enterprise" and "India General Pricing") with a "v1" version each, containing their respective template defaults as JSON.
+
+### RLS Policies
+- All authenticated users can read clients and versions
+- All authenticated users can insert/update clients and versions
+- Only admins can delete clients (checked via `has_role()` security definer function)
+- Users can read their own profile and role
+
+---
+
+## 2. Authentication
+
+### Login Page (`/auth`)
+- Email/Password sign-up and sign-in
+- Google OAuth button
+- Redirect to `/` (dashboard) on success
+
+### Auth Context (`AuthProvider`)
+- React context wrapping the app
+- Manages Supabase session via `onAuthStateChange`
+- Fetches user role from `user_roles` table
+- Exposes: `user`, `role` ('admin' | 'employee'), `loading`, `signOut`
+- Protected route wrapper redirects unauthenticated users to `/auth`
+
+---
+
+## 3. Role-Based Access Control
+
+### Hidden from Employees
+- **Sidebar**: "Cost to Company/Visit" input field
+- **Main Canvas**: Entire "Unit Economics" table
+- **Client Library**: "Delete Client" button
+
+### Visible to All
+- Implementation Cost and Follow-up Cost inputs
+- All other tables and controls
+
+---
+
+## 4. Client Library (Replaces Templates & Snapshots)
+
+### Sidebar Changes
+Replace the Template dropdown and Snapshot section with a "Client Library" panel:
+
+- **Current Client Display**: Shows active client name and version
+- **"Select Client" Button**: Opens a drawer/modal with:
+  - List of all clients with their versions
+  - "New Client" button
+  - Per-client actions: Rename, Duplicate, Delete (admin only)
+- **Version Controls**:
+  - "Save" button: Updates current version's data in the database
+  - "Save As" button: Creates a new version (prompts for name and optional notes)
+- **Remove**: Old template dropdown and LocalStorage snapshot manager
+
+### Data Flow
+- Selecting a client/version loads its JSON `data` into the `PricingInputs` state
+- Saving writes the current `PricingInputs` state back to the version's `data` column
+- The `template` field in `PricingInputs` becomes optional/removed since clients replace templates
+
+---
+
+## 5. Pricing Summary Table Enhancements
+
+Restructure the existing Pricing Summary table rows into three visual sections:
+
+**Section 1: Monthly Breakdown**
+1. Monthly Base Price — `basePrice * (1 - discount)`
+2. Overage Price — calculated excess cost (0 if no overage)
+3. Total Monthly Price — sum of rows 1+2
+4. *Horizontal separator line*
+
+**Section 2: Unit Rates**
+5. Base Price per Visit — `Monthly Base Price / Included Visits`
+6. Overage Price per Visit — the per-visit overage rate (with discount applied per scope)
+7. Effective Price per Visit — `Total Monthly Price / Actual Visits`
+8. *Horizontal separator line*
+
+**Section 3: Annual**
+9. Annual Price — `Total Monthly Price * 12`
+
+---
+
+## 6. Files to Create
+
 | File | Purpose |
 |------|---------|
-| `src/components/pricing/ImplementationSummaryTable.tsx` | New first-year cost summary table |
+| `src/pages/Auth.tsx` | Login/signup page |
+| `src/contexts/AuthContext.tsx` | Auth provider with role fetching |
+| `src/components/pricing/ClientLibrary.tsx` | Client selection drawer/modal with CRUD |
+| `src/hooks/useClients.ts` | React Query hooks for clients & versions CRUD |
 
-### Files Deleted
+## 7. Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/App.tsx` | Add AuthProvider wrapper, `/auth` route, protected route logic |
+| `src/types/pricing.ts` | Remove `template` and `Snapshot` type; update `PricingInputs` |
+| `src/pages/Index.tsx` | Use AuthContext for role; conditional rendering; load client data |
+| `src/components/pricing/PricingSidebar.tsx` | Replace template/snapshot with Client Library; hide cost field for employees |
+| `src/components/pricing/PricingSummaryTable.tsx` | Add new rows (base price per visit, overage per visit) with section separators |
+| `src/components/pricing/UnitEconomicsTable.tsx` | Wrap in admin-only check |
+| `src/utils/templates.ts` | Keep as fallback defaults for new client creation |
+| `src/utils/exportExcel.ts` | Update to reflect new Pricing Summary rows |
+
+## 8. Files to Delete
+
 | File | Reason |
 |------|--------|
-| `src/components/pricing/ContractLTVTable.tsx` | Replaced by ImplementationSummaryTable |
+| None | All existing files are modified in place |
+
+---
+
+## 9. Migration Sequence
+
+1. Enable Lovable Cloud backend
+2. Run database migrations: create enum, tables, trigger, RLS policies, seed data
+3. Enable Google OAuth in Lovable Cloud dashboard
+4. Build Auth page and AuthContext
+5. Build Client Library UI and hooks
+6. Update Pricing Summary table rows
+7. Apply role-based conditional rendering
+8. Update Excel export
 
