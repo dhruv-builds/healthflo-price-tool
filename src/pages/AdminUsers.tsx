@@ -5,6 +5,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -16,6 +17,7 @@ interface UserRow {
   user_id: string;
   email: string | null;
   role: "admin" | "employee";
+  approved: boolean;
   created_at: string;
 }
 
@@ -30,7 +32,7 @@ export default function AdminUsers() {
     setFetching(true);
     const { data: profiles, error: pErr } = await supabase
       .from("profiles")
-      .select("id, email, created_at");
+      .select("id, email, approved, created_at");
     const { data: roles, error: rErr } = await supabase
       .from("user_roles")
       .select("user_id, role");
@@ -47,6 +49,7 @@ export default function AdminUsers() {
         user_id: p.id,
         email: p.email,
         role: (roleMap.get(p.id) as "admin" | "employee") ?? "employee",
+        approved: p.approved ?? false,
         created_at: p.created_at,
       }))
     );
@@ -70,6 +73,19 @@ export default function AdminUsers() {
     }
   };
 
+  const toggleApproval = async (userId: string, approved: boolean) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ approved })
+      .eq("id", userId);
+    if (error) {
+      toast({ title: "Failed to update approval", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: approved ? "User approved" : "User access revoked" });
+      setUsers((prev) => prev.map((u) => (u.user_id === userId ? { ...u, approved } : u)));
+    }
+  };
+
   if (loading) return null;
   if (role !== "admin") return <Navigate to="/" replace />;
 
@@ -90,6 +106,7 @@ export default function AdminUsers() {
             <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
+                <TableHead>Approved</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Joined</TableHead>
               </TableRow>
@@ -98,6 +115,12 @@ export default function AdminUsers() {
               {users.map((u) => (
                 <TableRow key={u.user_id}>
                   <TableCell className="font-medium">{u.email ?? "—"}</TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={u.approved}
+                      onCheckedChange={(checked) => toggleApproval(u.user_id, checked)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Select value={u.role} onValueChange={(v) => updateRole(u.user_id, v as "admin" | "employee")}>
                       <SelectTrigger className="w-32 h-8 text-xs">
