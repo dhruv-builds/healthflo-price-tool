@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { PricingInputs, DISCOUNT_LABELS, Currency, FxState } from "@/types/pricing";
+import { PricingInputs, DISCOUNT_LABELS, DISCOUNT_TIERS, Currency, FxState } from "@/types/pricing";
 import { calculateAllTiers, calculateOverageScenarios } from "./calculations";
 import { formatPercent } from "./formatting";
 
@@ -21,11 +21,19 @@ export function exportToExcel(inputs: PricingInputs, fxState: FxState) {
     rows.push(["HealthFlo Enterprise Pricing — " + (currency === "INR" ? "INR View" : "USD View")]);
     rows.push([]);
 
-    // Pricing Summary
+    // Pricing Summary with enhanced rows
     rows.push(["Pricing Summary", ...DISCOUNT_LABELS]);
-    rows.push(["Monthly Price", ...tiers.map((t) => fmt(t.monthlyTotal))]);
-    rows.push(["Included Visits", ...tiers.map((t) => t.includedVisits)]);
-    rows.push(["Effective ₹/Visit", ...tiers.map((t) => fmt(t.effectivePricePerVisit))]);
+    rows.push(["Monthly Base Price", ...tiers.map((t) => fmt(t.monthlyBase))]);
+    rows.push(["Overage Price", ...tiers.map((t) => fmt(t.monthlyOverage))]);
+    rows.push(["Total Monthly Price", ...tiers.map((t) => fmt(t.monthlyTotal))]);
+    rows.push([]);
+    rows.push(["Base Price per Visit", ...tiers.map((t) => fmt(t.includedVisits > 0 ? t.monthlyBase / t.includedVisits : 0))]);
+    rows.push(["Overage Price per Visit", ...DISCOUNT_TIERS.map((d) => {
+      const overageDiscount = inputs.discountScope === "base" ? 0 : d;
+      return fmt(inputs.overagePrice * (1 - overageDiscount));
+    })]);
+    rows.push(["Effective Price per Visit", ...tiers.map((t) => fmt(t.effectivePricePerVisit))]);
+    rows.push([]);
     rows.push(["Annual Price", ...tiers.map((t) => fmt(t.annualPrice))]);
     rows.push([]);
 
@@ -58,7 +66,6 @@ export function exportToExcel(inputs: PricingInputs, fxState: FxState) {
     ["HealthFlo — Input Summary"],
     [],
     ["Parameter", "Value"],
-    ["Template", inputs.template === "jeena_seekho" ? "Jeena Seekho Enterprise" : "India General Pricing"],
     ["Included Visits", inputs.includedVisits],
     ["Base Price/Month (₹)", inputs.basePrice],
     ["Overage Price/Visit (₹)", inputs.overagePrice],
