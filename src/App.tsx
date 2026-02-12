@@ -8,13 +8,15 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AdminUsers from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
+import PendingApproval from "./components/PendingApproval";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, approved, loading, signOut } = useAuth();
   if (loading) return <div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>;
   if (!user) return <Navigate to="/auth" replace />;
+  if (!approved) return <PendingApproval onSignOut={signOut} />;
   return <>{children}</>;
 }
 
