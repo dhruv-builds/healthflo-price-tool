@@ -1,8 +1,10 @@
 import { Currency, FxState } from "@/types/pricing";
 import { Button } from "@/components/ui/button";
-import { Download, RefreshCw } from "lucide-react";
+import { Download, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface TopBarProps {
   currency: Currency;
@@ -15,6 +17,8 @@ interface TopBarProps {
 export function TopBar({ currency, setCurrency, fxState, onManualRate, onExport }: TopBarProps) {
   const [editingRate, setEditingRate] = useState(false);
   const [rateInput, setRateInput] = useState(fxState.rate.toString());
+  const { role } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-card px-6 py-3 shadow-sm">
@@ -77,6 +81,12 @@ export function TopBar({ currency, setCurrency, fxState, onManualRate, onExport 
           <Download className="h-3.5 w-3.5" />
           Export to Excel
         </Button>
+        {role === "admin" && (
+          <Button size="sm" variant="outline" onClick={() => navigate("/admin/users")} className="gap-1.5">
+            <Users className="h-3.5 w-3.5" />
+            Manage Users
+          </Button>
+        )}
       </div>
     </div>
   );
