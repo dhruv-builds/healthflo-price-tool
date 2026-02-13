@@ -1,10 +1,11 @@
 import { Currency, FxState } from "@/types/pricing";
 import { Button } from "@/components/ui/button";
-import { Download, Users } from "lucide-react";
+import { Download, Users, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TopBarProps {
   currency: Currency;
@@ -12,9 +13,11 @@ interface TopBarProps {
   fxState: FxState;
   onManualRate: (rate: number) => void;
   onExport: () => void;
+  isPresentationMode: boolean;
+  onTogglePresentationMode: () => void;
 }
 
-export function TopBar({ currency, setCurrency, fxState, onManualRate, onExport }: TopBarProps) {
+export function TopBar({ currency, setCurrency, fxState, onManualRate, onExport, isPresentationMode, onTogglePresentationMode }: TopBarProps) {
   const [editingRate, setEditingRate] = useState(false);
   const [rateInput, setRateInput] = useState(fxState.rate.toString());
   const { role } = useAuth();
@@ -77,11 +80,28 @@ export function TopBar({ currency, setCurrency, fxState, onManualRate, onExport 
             USD
           </button>
         </div>
+        {role === "admin" && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onTogglePresentationMode}
+                  className={`h-8 w-8 p-0 ${isPresentationMode ? "text-muted-foreground/60" : ""}`}
+                >
+                  {isPresentationMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Toggle Presentation Mode</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         <Button size="sm" onClick={onExport} className="gap-1.5">
           <Download className="h-3.5 w-3.5" />
           Export to Excel
         </Button>
-        {role === "admin" && (
+        {role === "admin" && !isPresentationMode && (
           <Button size="sm" variant="outline" onClick={() => navigate("/admin/users")} className="gap-1.5">
             <Users className="h-3.5 w-3.5" />
             Manage Users

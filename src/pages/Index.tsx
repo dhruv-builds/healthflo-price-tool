@@ -17,6 +17,7 @@ const Index = () => {
   const { role } = useAuth();
   const [inputs, setInputs] = useState<PricingInputs>(getTemplateDefaults("jeena_seekho"));
   const [currency, setCurrency] = useState<Currency>("INR");
+  const [isPresentationMode, setIsPresentationMode] = useState(false);
   const { fxState, setManualRate } = useExchangeRate();
 
   const [activeClientId, setActiveClientId] = useState<string | null>(null);
@@ -40,6 +41,7 @@ const Index = () => {
   }, [versions, activeClientId, activeVersionId]);
 
   const tiers = calculateAllTiers(inputs);
+  const effectiveRole = role === "admin" && isPresentationMode ? "employee" : role;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -49,12 +51,14 @@ const Index = () => {
         fxState={fxState}
         onManualRate={setManualRate}
         onExport={() => exportToExcel(inputs, fxState)}
+        isPresentationMode={isPresentationMode}
+        onTogglePresentationMode={() => setIsPresentationMode((p) => !p)}
       />
       <div className="flex flex-1 overflow-hidden">
         <PricingSidebar
           inputs={inputs}
           setInputs={setInputs}
-          role={role}
+          role={effectiveRole}
           activeClientId={activeClientId}
           activeVersionId={activeVersionId}
           setActiveClientId={setActiveClientId}
@@ -64,7 +68,7 @@ const Index = () => {
           <div className="mx-auto max-w-6xl space-y-6">
             <PricingSummaryTable tiers={tiers} inputs={inputs} currency={currency} fxRate={fxState.rate} />
             <OverageAnalysis inputs={inputs} currency={currency} fxRate={fxState.rate} />
-            {role === "admin" && (
+            {effectiveRole === "admin" && (
               <UnitEconomicsTable tiers={tiers} currency={currency} fxRate={fxState.rate} />
             )}
             <ImplementationSummaryTable inputs={inputs} tiers={tiers} currency={currency} fxRate={fxState.rate} />
