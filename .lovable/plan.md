@@ -1,69 +1,65 @@
 
 
-# Add User Role Management Panel (Admin Only)
+# Global Header + Pricing Toolbar Restructure
 
-## The Problem
-Currently, roles are auto-assigned (first user = admin, everyone else = employee) with no way to change them afterward. You need an admin panel to promote or demote users.
+## Problem
+The TopBar only renders inside the Pricing page (`Index.tsx`). When navigating to CRM, the header disappears entirely. The user wants a persistent global header across all modules, with pricing-specific controls moved into the Pricing module itself.
 
-## What Will Change
+## What Changes
 
-### New Page: User Management (`/admin/users`)
-- Accessible only to admins, via a "Manage Users" link in the top bar
-- Displays a table of all users (email, role, signup date)
-- Each row has a dropdown to switch between "admin" and "employee"
-- Changes are saved immediately to the database
+### 1. New Global Header (`src/components/GlobalHeader.tsx`)
+A slim, persistent header rendered in `App.tsx` above all protected routes. Contains only:
+- **HealthFlo** branding (update subtitle from "Enterprise Pricing Tool" to just "Enterprise Tool" or similar)
+- **Module switcher** (Pricing | CRM segmented control)
+- **Manage Users** button (admin only, non-presentation mode)
 
-### Database Changes
-- A new RLS policy on `user_roles` allowing admins to update roles
-- A new RLS policy on `profiles` allowing admins to read all profiles (currently users can only see their own)
+This header appears on every authenticated page — Pricing, CRM, and Admin.
 
-### UI Changes
-- **TopBar**: Add a "Manage Users" button (visible to admins only)
-- **App.tsx**: Add a protected `/admin/users` route
+### 2. New Pricing Toolbar (`src/components/pricing/PricingToolbar.tsx`)
+A secondary bar rendered inside `Index.tsx` (the Pricing page), sitting below the global header. Contains all the pricing-specific controls that currently live in TopBar:
+- Currency display + FX rate info strip (Currency: INR | Rate: ₹84.00 | Source | Updated)
+- INR/USD toggle
+- Presentation mode toggle (admin only)
+- Export to Excel button
 
----
+This keeps the pricing controls contextually relevant and visible only when in Pricing mode. Visually it can be a slightly lighter/thinner bar with a bottom border, clearly a sub-toolbar.
 
-## Technical Details
+### 3. Modified Files
 
-### 1. Database Migration (SQL)
+**`src/App.tsx`** — Wrap all protected routes in a layout that renders `GlobalHeader` at the top. The Pricing route (`/`) and CRM routes both sit below it.
 
-Two new RLS policies:
+**`src/pages/Index.tsx`** — Remove `<TopBar>`, replace with `<PricingToolbar>` rendered at the top of the pricing content area.
 
-```sql
--- Allow admins to read all profiles
-CREATE POLICY "Admins can read all profiles"
-ON public.profiles FOR SELECT
-TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+**`src/components/crm/CrmLayout.tsx`** — No changes needed; its sub-nav (Accounts/Tasks/Reports) continues rendering below the global header.
 
--- Allow admins to update user roles
-CREATE POLICY "Admins can update roles"
-ON public.user_roles FOR UPDATE
-TO authenticated
-USING (public.has_role(auth.uid(), 'admin'))
-WITH CHECK (public.has_role(auth.uid(), 'admin'));
+**`src/components/pricing/TopBar.tsx`** — This file gets split into `GlobalHeader` and `PricingToolbar`, then can be removed.
 
--- Allow admins to read all roles
-CREATE POLICY "Admins can read all roles"
-ON public.user_roles FOR SELECT
-TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+### 4. Layout Structure
+
+```text
+┌─────────────────────────────────────────────┐
+│ GlobalHeader                                │
+│ [HealthFlo]  [Pricing | CRM]  [Manage Users]│
+├─────────────────────────────────────────────┤
+│ (module content below)                      │
+│                                             │
+│ If Pricing:                                 │
+│ ┌─ PricingToolbar ────────────────────────┐ │
+│ │ Currency: INR | Rate | [INR|USD] [Export]│ │
+│ ├─────────────────────────────────────────┤ │
+│ │ Sidebar + Main content                  │ │
+│ └─────────────────────────────────────────┘ │
+│                                             │
+│ If CRM:                                     │
+│ ┌─ CRM Sub-nav ──────────────────────────┐ │
+│ │ [Accounts] [Tasks] [Reports]            │ │
+│ ├─────────────────────────────────────────┤ │
+│ │ CRM content                             │ │
+│ └─────────────────────────────────────────┘ │
+└─────────────────────────────────────────────┘
 ```
 
-### 2. New File: `src/pages/AdminUsers.tsx`
-- Fetches all profiles and their roles (joined)
-- Renders a table with columns: Email, Role (dropdown), Joined
-- Dropdown calls `supabase.from('user_roles').update({ role }).eq('user_id', userId)`
-- Shows toast on success/error
-- Wrapped in admin-only check (redirects non-admins)
+### 5. Implementation Approach
 
-### 3. Modified File: `src/App.tsx`
-- Add route: `/admin/users` pointing to `AdminUsers`, wrapped in `ProtectedRoute`
-
-### 4. Modified File: `src/components/pricing/TopBar.tsx`
-- Add a "Manage Users" icon button (e.g., Users icon from lucide) visible when `role === "admin"`
-- Links to `/admin/users`
-
-### 5. Modified File: `src/contexts/AuthContext.tsx`
-- No changes needed; role is already exposed
+Create an `AuthenticatedLayout` component in `App.tsx` that renders `GlobalHeader` + an `<Outlet />`. Restructure routing so `/`, `/crm/*`, and `/admin/users` are all children of this layout route, eliminating the need for each page to independently render the header.
 
