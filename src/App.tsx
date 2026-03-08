@@ -9,6 +9,11 @@ import Auth from "./pages/Auth";
 import AdminUsers from "./pages/AdminUsers";
 import NotFound from "./pages/NotFound";
 import PendingApproval from "./components/PendingApproval";
+import { CrmLayout } from "./components/crm/CrmLayout";
+import CrmHome from "./pages/crm/CrmHome";
+import AccountDetail from "./pages/crm/AccountDetail";
+import TasksPage from "./pages/crm/TasksPage";
+import ReportsPage from "./pages/crm/ReportsPage";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +36,12 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+            <Route path="/crm" element={<ProtectedRoute><CrmLayout /></ProtectedRoute>}>
+              <Route index element={<CrmHome />} />
+              <Route path="accounts/:id" element={<AccountDetail />} />
+              <Route path="tasks" element={<TasksPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+            </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PricingInputs, Currency } from "@/types/pricing";
 import { getTemplateDefaults } from "@/utils/templates";
 import { calculateAllTiers } from "@/utils/calculations";
@@ -14,6 +15,7 @@ import { UnitEconomicsTable } from "@/components/pricing/UnitEconomicsTable";
 import { ImplementationSummaryTable } from "@/components/pricing/ImplementationSummaryTable";
 
 const Index = () => {
+  const [searchParams] = useSearchParams();
   const { role } = useAuth();
   const [inputs, setInputs] = useState<PricingInputs>(getTemplateDefaults("jeena_seekho"));
   const [currency, setCurrency] = useState<Currency>("INR");
@@ -28,10 +30,13 @@ const Index = () => {
 
   // Auto-select first client/version on load
   useEffect(() => {
-    if (!activeClientId && clients.length > 0) {
+    const clientIdParam = searchParams.get("clientId");
+    if (clientIdParam && clients.some((c) => c.id === clientIdParam)) {
+      setActiveClientId(clientIdParam);
+    } else if (!activeClientId && clients.length > 0) {
       setActiveClientId(clients[0].id);
     }
-  }, [clients, activeClientId]);
+  }, [clients, activeClientId, searchParams]);
 
   useEffect(() => {
     if (activeClientId && !activeVersionId && versions.length > 0) {
