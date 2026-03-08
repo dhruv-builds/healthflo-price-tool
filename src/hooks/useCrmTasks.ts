@@ -7,7 +7,7 @@ const KEY = "crm-tasks";
 
 export function useCrmTasks(filters?: {
   assignee_id?: string;
-  status?: string;
+  status?: CrmTaskStatus;
   account_id?: string;
   overdue?: boolean;
   dueThisWeek?: boolean;
