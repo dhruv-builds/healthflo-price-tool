@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { CrmTask, CrmTaskInsert, CrmTaskUpdate } from "@/types/crm";
+import type { CrmTask, CrmTaskInsert, CrmTaskUpdate, CrmTaskStatus } from "@/types/crm";
 import { useToast } from "@/hooks/use-toast";
 
 const KEY = "crm-tasks";

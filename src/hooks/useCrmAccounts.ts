@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { CrmAccount, CrmAccountInsert, CrmAccountUpdate } from "@/types/crm";
+import type { CrmAccount, CrmAccountInsert, CrmAccountUpdate, CrmAccountType, CrmAccountStatus } from "@/types/crm";
 import { useToast } from "@/hooks/use-toast";
 
 const ACCOUNTS_KEY = "crm-accounts";
