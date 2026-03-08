@@ -35,6 +35,409 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_accounts: {
+        Row: {
+          account_type: Database["public"]["Enums"]["crm_account_type"]
+          created_at: string
+          created_by: string
+          geography: string | null
+          id: string
+          last_activity_at: string | null
+          linked_client_id: string | null
+          name: string
+          notes: string | null
+          owner_id: string
+          referrer_name: string | null
+          source: Database["public"]["Enums"]["crm_source"]
+          status: Database["public"]["Enums"]["crm_account_status"]
+          updated_at: string
+          updated_by: string | null
+          website: string | null
+        }
+        Insert: {
+          account_type: Database["public"]["Enums"]["crm_account_type"]
+          created_at?: string
+          created_by: string
+          geography?: string | null
+          id?: string
+          last_activity_at?: string | null
+          linked_client_id?: string | null
+          name: string
+          notes?: string | null
+          owner_id: string
+          referrer_name?: string | null
+          source: Database["public"]["Enums"]["crm_source"]
+          status?: Database["public"]["Enums"]["crm_account_status"]
+          updated_at?: string
+          updated_by?: string | null
+          website?: string | null
+        }
+        Update: {
+          account_type?: Database["public"]["Enums"]["crm_account_type"]
+          created_at?: string
+          created_by?: string
+          geography?: string | null
+          id?: string
+          last_activity_at?: string | null
+          linked_client_id?: string | null
+          name?: string
+          notes?: string | null
+          owner_id?: string
+          referrer_name?: string | null
+          source?: Database["public"]["Enums"]["crm_source"]
+          status?: Database["public"]["Enums"]["crm_account_status"]
+          updated_at?: string
+          updated_by?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_accounts_linked_client_id_fkey"
+            columns: ["linked_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_activities: {
+        Row: {
+          account_id: string
+          activity_date: string
+          activity_type: Database["public"]["Enums"]["crm_activity_type"]
+          contact_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          notes: string
+          opportunity_id: string | null
+          title: string | null
+        }
+        Insert: {
+          account_id: string
+          activity_date: string
+          activity_type: Database["public"]["Enums"]["crm_activity_type"]
+          contact_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          notes: string
+          opportunity_id?: string | null
+          title?: string | null
+        }
+        Update: {
+          account_id?: string
+          activity_date?: string
+          activity_type?: Database["public"]["Enums"]["crm_activity_type"]
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string
+          opportunity_id?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_activities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "crm_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_activities_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_activities_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_activity_attachments: {
+        Row: {
+          activity_id: string
+          created_at: string
+          created_by: string
+          file_path: string | null
+          id: string
+          item_type: Database["public"]["Enums"]["crm_item_type"]
+          title: string
+          url: string | null
+        }
+        Insert: {
+          activity_id: string
+          created_at?: string
+          created_by: string
+          file_path?: string | null
+          id?: string
+          item_type: Database["public"]["Enums"]["crm_item_type"]
+          title: string
+          url?: string | null
+        }
+        Update: {
+          activity_id?: string
+          created_at?: string
+          created_by?: string
+          file_path?: string | null
+          id?: string
+          item_type?: Database["public"]["Enums"]["crm_item_type"]
+          title?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_activity_attachments_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_contacts: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string
+          email: string | null
+          id: string
+          linkedin_url: string | null
+          location: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          seniority: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by: string
+          email?: string | null
+          id?: string
+          linkedin_url?: string | null
+          location?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          seniority?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          id?: string
+          linkedin_url?: string | null
+          location?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          seniority?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contacts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "crm_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_documents: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          file_path: string | null
+          id: string
+          item_type: Database["public"]["Enums"]["crm_item_type"]
+          title: string
+          url: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          file_path?: string | null
+          id?: string
+          item_type: Database["public"]["Enums"]["crm_item_type"]
+          title: string
+          url?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          file_path?: string | null
+          id?: string
+          item_type?: Database["public"]["Enums"]["crm_item_type"]
+          title?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_documents_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "crm_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_opportunities: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string
+          expected_close_date: string | null
+          expected_value: number | null
+          id: string
+          name: string
+          next_step: string | null
+          notes: string | null
+          owner_id: string
+          stage: Database["public"]["Enums"]["crm_opp_stage"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by: string
+          expected_close_date?: string | null
+          expected_value?: number | null
+          id?: string
+          name: string
+          next_step?: string | null
+          notes?: string | null
+          owner_id: string
+          stage?: Database["public"]["Enums"]["crm_opp_stage"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string
+          expected_close_date?: string | null
+          expected_value?: number | null
+          id?: string
+          name?: string
+          next_step?: string | null
+          notes?: string | null
+          owner_id?: string
+          stage?: Database["public"]["Enums"]["crm_opp_stage"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_opportunities_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "crm_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_tasks: {
+        Row: {
+          account_id: string | null
+          activity_id: string | null
+          assignee_id: string
+          contact_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string
+          id: string
+          opportunity_id: string | null
+          priority: Database["public"]["Enums"]["crm_task_priority"]
+          status: Database["public"]["Enums"]["crm_task_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          activity_id?: string | null
+          assignee_id: string
+          contact_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date: string
+          id?: string
+          opportunity_id?: string | null
+          priority?: Database["public"]["Enums"]["crm_task_priority"]
+          status?: Database["public"]["Enums"]["crm_task_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          activity_id?: string | null
+          assignee_id?: string
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          opportunity_id?: string | null
+          priority?: Database["public"]["Enums"]["crm_task_priority"]
+          status?: Database["public"]["Enums"]["crm_task_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_tasks_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "crm_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "crm_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_tasks_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "crm_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           approved: boolean
@@ -124,9 +527,38 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_approved_user: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "employee"
+      crm_account_status:
+        | "Active"
+        | "Dormant"
+        | "Won Customer"
+        | "Lost"
+        | "Archived"
+      crm_account_type: "Hospital" | "Clinic" | "Doctor"
+      crm_activity_type: "Meeting" | "Call" | "Demo" | "Email" | "Note"
+      crm_item_type: "file" | "link"
+      crm_opp_stage:
+        | "Prospecting"
+        | "Discovery"
+        | "Demo"
+        | "Proposal"
+        | "Pricing"
+        | "Negotiation"
+        | "Won"
+        | "Lost"
+      crm_source:
+        | "Founder Network"
+        | "Outbound"
+        | "Referral"
+        | "Inbound"
+        | "Partner"
+        | "Event"
+        | "Existing Relationship"
+      crm_task_priority: "Low" | "Medium" | "High"
+      crm_task_status: "Open" | "In Progress" | "Done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -255,6 +687,37 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "employee"],
+      crm_account_status: [
+        "Active",
+        "Dormant",
+        "Won Customer",
+        "Lost",
+        "Archived",
+      ],
+      crm_account_type: ["Hospital", "Clinic", "Doctor"],
+      crm_activity_type: ["Meeting", "Call", "Demo", "Email", "Note"],
+      crm_item_type: ["file", "link"],
+      crm_opp_stage: [
+        "Prospecting",
+        "Discovery",
+        "Demo",
+        "Proposal",
+        "Pricing",
+        "Negotiation",
+        "Won",
+        "Lost",
+      ],
+      crm_source: [
+        "Founder Network",
+        "Outbound",
+        "Referral",
+        "Inbound",
+        "Partner",
+        "Event",
+        "Existing Relationship",
+      ],
+      crm_task_priority: ["Low", "Medium", "High"],
+      crm_task_status: ["Open", "In Progress", "Done"],
     },
   },
 } as const
