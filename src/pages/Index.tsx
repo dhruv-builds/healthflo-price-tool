@@ -7,7 +7,7 @@ import { exportToExcel } from "@/utils/exportExcel";
 import { useExchangeRate } from "@/hooks/useExchangeRate";
 import { useAuth } from "@/contexts/AuthContext";
 import { useClients, useVersions } from "@/hooks/useClients";
-import { TopBar } from "@/components/pricing/TopBar";
+import { PricingToolbar } from "@/components/pricing/PricingToolbar";
 import { PricingSidebar } from "@/components/pricing/PricingSidebar";
 import { PricingSummaryTable } from "@/components/pricing/PricingSummaryTable";
 import { OverageAnalysis } from "@/components/pricing/OverageAnalysis";
@@ -28,7 +28,6 @@ const Index = () => {
   const { data: clients = [] } = useClients();
   const { data: versions = [] } = useVersions(activeClientId);
 
-  // Auto-select first client/version on load
   useEffect(() => {
     const clientIdParam = searchParams.get("clientId");
     if (clientIdParam && clients.some((c) => c.id === clientIdParam)) {
@@ -49,8 +48,8 @@ const Index = () => {
   const effectiveRole = role === "admin" && isPresentationMode ? "employee" : role;
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <TopBar
+    <div className="flex flex-1 flex-col">
+      <PricingToolbar
         currency={currency}
         setCurrency={setCurrency}
         fxState={fxState}
