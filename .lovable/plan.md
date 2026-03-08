@@ -1,145 +1,145 @@
 
 
-# Plan: CRM Module for HealthFlo
+# CRM Module — Implementation Plan
 
-## Overview
+## Architecture Decisions
 
-Add a full CRM module alongside the existing Pricing tool. The app gets a module switcher in the top bar, new CRM routes, 7 new database tables, a storage bucket for file uploads, and modular CRM components organized under `src/components/crm/` and `src/pages/crm/`.
+**CRM → Pricing navigation:** URL query parameter `/?clientId={uuid}`. `Index.tsx` reads `clientId` from `useSearchParams` and sets `activeClientId`. Deterministic, stateless, shareable.
 
----
+**Pricing linkage:** Account-level only via `linked_client_id` FK on `crm_accounts` → `clients.id`. No linkage on opportunities or other entities.
 
-## 1. Database Schema (Migration)
+**`last_activity_at` strategy:** Denormalized column on `crm_accounts`, updated by a Postgres trigger on `crm_activities` INSERT. Stale opportunities = non-terminal stage + account `last_activity_at < now() - 14 days` (or null).
 
-**New tables:**
+**RLS approach:** All CRM tables use a `SECURITY DEFINER` function `is_approved_user(uuid)` that checks `profiles.approved = true`. This ensures only approved users access CRM data — not just authenticated.
 
-| Table | Key Columns | Notes |
-|---|---|---|
-| `crm_accounts` | id, name, account_type (enum: Hospital/Clinic/Doctor), owner_id (uuid), source (enum), referrer_name, geography, status (enum), website, notes, linked_client_id (FK → clients), created_by, updated_by, created_at, updated_at | Core entity |
-| `crm_contacts` | id, account_id (FK), name, title, seniority, location, linkedin_url, phone, email, notes, created_by, created_at | Nested under account |
-| `crm_opportunities` | id, account_id (FK), name, stage (enum: Prospecting→Won/Lost), owner_id, expected_value, expected_close_date, next_step, notes, created_by, updated_by, created_at, updated_at | Optional per account |
-| `crm_activities` | id, account_id (FK), contact_id (FK nullable), opportunity_id (FK nullable), activity_type (enum: Meeting/Call/Demo/Email/Note), activity_date, title, notes, created_by, created_at | Timeline entries |
-| `crm_tasks` | id, account_id (FK nullable), contact_id (FK nullable), opportunity_id (FK nullable), activity_id (FK nullable), title, description, assignee_id, due_date, priority (enum: Low/Med/High), status (enum: Open/InProgress/Done), created_by, created_at, updated_at | Follow-ups |
-| `crm_documents` | id, account_id (FK), item_type (enum: file/link), title, url, file_path, description, created_by, created_at | Account-level docs/links |
-| `crm_activity_attachments` | id, activity_id (FK), item_type (enum: file/link), title, url, file_path, created_by, created_at | Activity-level attachments |
+**Delete/archive behavior:**
+- Accounts: soft-archive via status = 'Archived'; hard delete admin-only (cascades children)
+- Contacts, activities, opportunities, tasks, documents, attachments: hard delete by creator or admin
+- All cascades via FK `ON DELETE CASCADE`
 
-**Enums:** `crm_account_type`, `crm_source`, `crm_account_status`, `crm_opp_stage`, `crm_activity_type`, `crm_task_priority`, `crm_task_status`, `crm_item_type`
+**File uploads:** Create `crm-files` storage bucket. Links always work. File upload UI checks bucket availability and disables gracefully if unavailable.
 
-**Storage bucket:** `crm-files` (public: false) with RLS policies for authenticated users.
-
-**RLS:** All tables get policies scoped to authenticated users (SELECT/INSERT/UPDATE). DELETE restricted to admins on accounts. All use `auth.uid()` checks. This is tighter than the current permissive pricing table policies.
+**Indexes:** On all FK columns, filter columns (type, status, stage, priority, assignee, owner, due_date), and `last_activity_at`.
 
 ---
 
-## 2. File Organization
+## Database Migration (Single migration)
 
-```text
-src/
-├── types/
-│   └── crm.ts                    # All CRM type definitions
-├── hooks/
-│   ├── useCrmAccounts.ts          # Account CRUD + filters
-│   ├── useCrmContacts.ts          # Contact CRUD
-│   ├── useCrmOpportunities.ts     # Opportunity CRUD
-│   ├── useCrmActivities.ts        # Activity CRUD
-│   ├── useCrmTasks.ts             # Task CRUD + filtered views
-│   └── useCrmDocuments.ts         # Documents & attachments CRUD
-├── pages/
-│   └── crm/
-│       ├── CrmHome.tsx            # Accounts list + metrics strip
-│       ├── AccountDetail.tsx      # Tabbed account detail page
-│       ├── TasksPage.tsx          # Global tasks view
-│       └── ReportsPage.tsx        # Lightweight CRM reports
-├── components/
-│   └── crm/
-│       ├── CrmLayout.tsx          # CRM shell with sub-nav
-│       ├── AccountsTable.tsx      # Filterable accounts table
-│       ├── AccountForm.tsx        # Create/Edit account modal
-│       ├── ContactsList.tsx       # Contacts section
-│       ├── ContactForm.tsx        # Contact modal
-│       ├── OpportunitySection.tsx # Opportunity card/form
-│       ├── ActivityTimeline.tsx   # Timeline display
-│       ├── ActivityForm.tsx       # Log activity modal
-│       ├── TasksList.tsx          # Tasks list component
-│       ├── TaskForm.tsx           # Task modal
-│       ├── DocumentsSection.tsx   # Docs/links section
-│       ├── DocumentForm.tsx       # Add file/link modal
-│       └── PricingLinkSelector.tsx # Link pricing client picker
+**8 enums:**
+- `crm_account_type`: Hospital, Clinic, Doctor
+- `crm_source`: Founder Network, Outbound, Referral, Inbound, Partner, Event, Existing Relationship
+- `crm_account_status`: Active, Dormant, Won Customer, Lost, Archived
+- `crm_opp_stage`: Prospecting, Discovery, Demo, Proposal, Pricing, Negotiation, Won, Lost
+- `crm_activity_type`: Meeting, Call, Demo, Email, Note
+- `crm_task_priority`: Low, Medium, High
+- `crm_task_status`: Open, In Progress, Done
+- `crm_item_type`: file, link
+
+**7 tables** with `created_by`, `updated_by` (where applicable), timestamps, proper FKs with `ON DELETE CASCADE`.
+
+**1 helper function:** `is_approved_user(uuid)` — `SECURITY DEFINER`, checks `profiles.approved`.
+
+**1 trigger:** On `crm_activities` INSERT → update parent `crm_accounts.last_activity_at`.
+
+**RLS policies:** All tables: SELECT/INSERT/UPDATE for approved users. DELETE on accounts for admins only. DELETE on other entities for creator or admin.
+
+**Storage bucket:** `crm-files` with authenticated-user RLS on `storage.objects`.
+
+**~15 indexes** on FK and filter columns.
+
+---
+
+## File Organization
+
+```
+src/types/crm.ts
+src/hooks/useCrmAccounts.ts
+src/hooks/useCrmContacts.ts
+src/hooks/useCrmOpportunities.ts
+src/hooks/useCrmActivities.ts
+src/hooks/useCrmTasks.ts
+src/hooks/useCrmDocuments.ts
+src/pages/crm/CrmHome.tsx
+src/pages/crm/AccountDetail.tsx
+src/pages/crm/TasksPage.tsx
+src/pages/crm/ReportsPage.tsx
+src/components/crm/CrmLayout.tsx
+src/components/crm/AccountsTable.tsx
+src/components/crm/AccountForm.tsx
+src/components/crm/ContactsList.tsx
+src/components/crm/ContactForm.tsx
+src/components/crm/OpportunitySection.tsx
+src/components/crm/ActivityTimeline.tsx
+src/components/crm/ActivityForm.tsx
+src/components/crm/TasksList.tsx
+src/components/crm/TaskForm.tsx
+src/components/crm/DocumentsSection.tsx
+src/components/crm/DocumentForm.tsx
+src/components/crm/PricingLinkSelector.tsx
 ```
 
 ---
 
-## 3. Routing & Module Switching
+## Routing Changes
 
-**TopBar changes:**
-- Add a segmented control (Pricing | CRM) to the left section of `TopBar.tsx`, next to the HealthFlo branding.
-- When in CRM mode, hide pricing-specific controls (currency toggle, FX rate, export, presentation mode). Show CRM-specific nav instead.
-- Alternatively, the module switcher lives at the app level and each module has its own top bar. Given the current architecture where `TopBar` is inside `Index.tsx`, the cleaner approach is:
-
-**App.tsx route additions:**
-```
-/crm              → CrmHome (accounts list)
-/crm/accounts/:id → AccountDetail
-/crm/tasks        → TasksPage
-/crm/reports      → ReportsPage
-```
+**App.tsx** adds:
+- `/crm` → `CrmHome`
+- `/crm/accounts/:id` → `AccountDetail`
+- `/crm/tasks` → `TasksPage`
+- `/crm/reports` → `ReportsPage`
 
 All wrapped in existing `ProtectedRoute`.
 
-**Module switcher approach:** Add a simple tab/segmented control in the top bar area. Clicking "Pricing" navigates to `/`, clicking "CRM" navigates to `/crm`. Both modules share the auth shell but have independent layouts.
+**TopBar.tsx** gets a segmented control (Pricing | CRM) next to the HealthFlo branding. When on `/crm/*`, pricing-specific controls (currency, FX, export, presentation mode) are hidden. CRM sub-nav (Accounts, Tasks, Reports) shown instead.
+
+**Index.tsx** reads `?clientId=` from URL search params to auto-select a pricing client when navigating from CRM.
 
 ---
 
-## 4. Key Implementation Details
+## Build Phases
 
-**Account Management:**
-- Filterable table with search, type/status/owner/source filters
-- Conditional referrer_name field when source = "Referral"
-- Website URL validation via zod
-- Status: Active, Dormant, Won Customer, Lost, Archived
-- Owner dropdown populated from profiles table
+### Phase 1: Database + Types + Hooks
+- Single SQL migration with all enums, tables, trigger, indexes, RLS, storage bucket
+- `src/types/crm.ts` — TypeScript types/enums
+- All 6 `useCrm*.ts` hooks with React Query CRUD
 
-**Contacts:** Simple list under account detail with modal form. Name required, all else optional.
+### Phase 2: Module Switcher + Routes + Layout
+- TopBar segmented control
+- CRM routes in App.tsx
+- CrmLayout shell with sub-nav
+- Index.tsx `?clientId=` support
 
-**Opportunities:** Card/inline section on account detail. Stage pipeline: Prospecting → Discovery → Demo → Proposal → Pricing → Negotiation → Won → Lost. Won/Lost are terminal.
+### Phase 3: Accounts + Contacts
+- CrmHome with metrics strip + filterable accounts table
+- AccountForm dialog (zod validation, conditional referrer_name)
+- AccountDetail page shell with tabs
+- ContactsList + ContactForm
 
-**Activity Timeline:** Reverse chronological. Each activity can link to a contact, opportunity, and have inline file/link attachments. "Save & Create Task" secondary action on the form.
+### Phase 4: Opportunities + Activities
+- OpportunitySection (inline card/form, stage pipeline)
+- ActivityTimeline + ActivityForm (with inline attachment/link display)
+- "Save & Create Task" secondary action
 
-**Tasks:** Global `/crm/tasks` page with tab filters (My Tasks, All, Overdue, Due This Week). Also shown contextually on account detail.
+### Phase 5: Tasks + Documents
+- TasksPage (global, filtered views: My/All/Overdue/Due This Week)
+- TaskForm dialog
+- DocumentsSection + DocumentForm (links mandatory, file upload conditional)
+- Activity-level attachments
 
-**Documents/Links:** Account-level section. Links always work. File upload gated on storage bucket availability — if bucket creation fails, show links only with a message.
+### Phase 6: Pricing Linkage + Reports
+- PricingLinkSelector (dropdown of existing `clients`)
+- "Open in Pricing" button → `/?clientId={id}`
+- ReportsPage (KPI cards: accounts by type, opps by stage, due tasks, stale opps, recent activity)
 
-**Pricing Linkage:** `linked_client_id` FK on `crm_accounts` → `clients.id`. A selector component queries existing pricing clients. "Open in Pricing" navigates to `/` and sets the active client (via URL param or context).
-
-**Reports:** KPI cards (accounts by type, open opps by stage, tasks due today/this week, stale opps). Simple queries, no charts needed for MVP.
+### Phase 7: Polish
+- Empty, loading, error states across all CRM surfaces
+- Pricing module regression check
 
 ---
 
-## 5. What Stays Unchanged
-
-- All existing pricing routes, components, and behavior
-- Auth flow, approval gating, role system
-- `AuthContext`, `PendingApproval`, `AdminUsers`
-- Existing database tables (`clients`, `versions`, `profiles`, `user_roles`)
-- Presentation mode toggle
-- Export to Excel
-
----
-
-## 6. Build Sequence
-
-Given the size, this will be implemented across multiple steps:
-
-1. **Database migration** — all 7 tables, enums, storage bucket, RLS policies
-2. **Types + hooks** — CRM type definitions and all data hooks
-3. **Module switcher + CRM routes + layout shell**
-4. **Accounts list + account form**
-5. **Account detail page + contacts + opportunity**
-6. **Activity timeline + activity form**
-7. **Tasks page + task form**
-8. **Documents/links + activity attachments**
-9. **Pricing client linking**
-10. **Reports page**
-11. **Empty/loading/error states polish**
-
-This is a large build. Implementation will proceed step by step, starting with the database schema and core scaffolding.
+## What Stays Unchanged
+- All pricing routes, components, behavior (`/`, `/auth`, `/admin/users`)
+- Auth flow, approval gating, role system, `AuthContext`
+- Existing tables (`clients`, `versions`, `profiles`, `user_roles`)
+- Presentation mode, export, currency toggle
 
