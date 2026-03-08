@@ -6,8 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 const ACCOUNTS_KEY = "crm-accounts";
 
 export function useCrmAccounts(filters?: {
-  account_type?: string;
-  status?: string;
+  account_type?: CrmAccountType;
+  status?: CrmAccountStatus;
   owner_id?: string;
   search?: string;
 }) {
