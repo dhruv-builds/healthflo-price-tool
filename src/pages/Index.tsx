@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PricingInputs, Currency } from "@/types/pricing";
 import { getTemplateDefaults } from "@/utils/templates";
 import { calculateAllTiers } from "@/utils/calculations";
