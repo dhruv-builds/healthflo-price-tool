@@ -15,6 +15,7 @@ import { UnitEconomicsTable } from "@/components/pricing/UnitEconomicsTable";
 import { ImplementationSummaryTable } from "@/components/pricing/ImplementationSummaryTable";
 
 const Index = () => {
+  const [searchParams] = useSearchParams();
   const { role } = useAuth();
   const [inputs, setInputs] = useState<PricingInputs>(getTemplateDefaults("jeena_seekho"));
   const [currency, setCurrency] = useState<Currency>("INR");
