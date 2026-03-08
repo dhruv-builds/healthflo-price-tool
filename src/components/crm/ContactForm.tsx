@@ -66,7 +66,7 @@ export function ContactForm({ open, onOpenChange, accountId, contact }: ContactF
     if (isEdit && contact) {
       await updateContact.mutateAsync({ id: contact.id, account_id: accountId, ...payload });
     } else {
-      await createContact.mutateAsync({ ...payload, account_id: accountId, created_by: user.id });
+      await createContact.mutateAsync({ ...payload, name: values.name, account_id: accountId, created_by: user.id });
     }
     onOpenChange(false);
     form.reset();
