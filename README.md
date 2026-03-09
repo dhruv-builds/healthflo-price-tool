@@ -168,4 +168,4 @@ This is a private internal tool. All rights reserved.
 
 ---
 
-<p align="center">Built with ❤️ using <a href="https://lovable.dev">Lovable</a></p>
+
