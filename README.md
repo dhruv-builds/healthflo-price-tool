@@ -1,73 +1,171 @@
-# Welcome to your Lovable project
+<p align="center">
+  <img src="docs/banner.png" alt="HealthFlo Banner" width="100%" />
+</p>
 
-## Project info
+<h1 align="center">🏥 HealthFlo</h1>
+<p align="center"><strong>Enterprise Pricing & CRM Platform for Healthcare Growth Teams</strong></p>
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+<p align="center">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" alt="React 18" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Supabase-Backend-3FCF8E?logo=supabase&logoColor=white" alt="Supabase" />
+  <img src="https://img.shields.io/badge/shadcn/ui-Components-000000?logo=shadcnui&logoColor=white" alt="shadcn/ui" />
+  <img src="https://img.shields.io/badge/Status-V1_(Cloud--synced)-brightgreen" alt="Status" />
+</p>
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 📌 Overview
 
-**Use Lovable**
+HealthFlo is an internal enterprise platform built for founder and growth teams in healthcare. It combines **multi-tier pricing modeling** with a lightweight **CRM** to manage hospital, clinic, and doctor relationships — all in one place.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## ✨ Features
 
-**Use your preferred IDE**
+### 💰 Pricing Tool
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+| Feature | Description |
+|---|---|
+| **Multi-Tier Discount Modeling** | Automatically calculates pricing across 6 discount tiers (0–50%) with configurable base price, overage rates, and included visits |
+| **INR / USD Currency Support** | Toggle between currencies with live FX rates (API-sourced or manual override) |
+| **Overage Analysis** | Visual breakdown of overage costs when actual visits exceed included volume |
+| **Unit Economics** | Admin-only margin analysis showing cost, revenue, profit, and margin % per tier |
+| **Implementation Cost Modeling** | First-hospital and per-additional-hospital implementation pricing |
+| **Excel Export** | One-click export of the full pricing model to `.xlsx` via SheetJS |
+| **Client & Version Management** | Save, load, and iterate on pricing versions per client |
+| **Presentation Mode** | Admin toggle to hide sensitive unit economics when screen-sharing |
+| **Template System** | Pre-built templates (e.g., Jeena Seekho, India General) for quick setup |
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 🏢 CRM Module
 
-Follow these steps:
+| Feature | Description |
+|---|---|
+| **Account Management** | Track Hospitals, Clinics, and Doctors with status, source, geography, and ownership |
+| **Contacts** | Store contacts per account with title, seniority, LinkedIn, phone, and email |
+| **Opportunities** | Pipeline management with 8 stages from Prospecting → Won/Lost, expected value, and close dates |
+| **Activity Timeline** | Log Meetings, Calls, Demos, Emails, and Notes with file/link attachments |
+| **Tasks** | Assignable tasks with priority (Low/Medium/High), status tracking, and due dates |
+| **Documents & Links** | Attach files and URLs at the account level for proposals, contracts, and references |
+| **Pricing Linkage** | Link CRM accounts to pricing clients for seamless cross-module navigation |
+| **Reports** | Lightweight reporting dashboard with pipeline and activity analytics |
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+### 🔐 Auth & Security
+
+| Feature | Description |
+|---|---|
+| **Email/Password + Google OAuth** | Dual sign-in methods with email verification |
+| **Admin Approval Gating** | New users must be approved by an admin before accessing the platform |
+| **Role-Based Access** | `admin` and `employee` roles stored in a dedicated `user_roles` table |
+| **Row-Level Security** | RLS policies on all database tables enforced via `has_role()` security-definer function |
+| **User Management** | Admin panel to approve users and manage roles |
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Framework** | React 18 + TypeScript |
+| **Build Tool** | Vite 5 |
+| **Styling** | Tailwind CSS 3 + shadcn/ui |
+| **Routing** | react-router-dom v6 |
+| **State / Data** | TanStack React Query v5 |
+| **Backend** | Supabase (Auth, Postgres, Storage, Edge Functions) |
+| **Charts** | Recharts |
+| **Excel Export** | SheetJS (xlsx) |
+| **Forms** | React Hook Form + Zod validation |
+
+---
+
+## 📁 Project Structure
+
+| Directory | Purpose |
+|---|---|
+| `src/pages/` | Route-level page components (Auth, Index/Pricing, CRM pages, Admin) |
+| `src/components/pricing/` | Pricing module UI — toolbar, sidebar, summary tables, overage & unit economics |
+| `src/components/crm/` | CRM module UI — accounts, contacts, opportunities, activities, tasks, documents |
+| `src/components/ui/` | shadcn/ui primitives (button, dialog, table, form, etc.) |
+| `src/hooks/` | Data-fetching hooks (useClients, useCrmAccounts, useCrmContacts, etc.) |
+| `src/contexts/` | AuthContext for session, role, and approval state |
+| `src/types/` | TypeScript types for Pricing and CRM domains |
+| `src/utils/` | Calculation engine, formatting, Excel export, template defaults |
+| `src/integrations/` | Supabase client, auto-generated types, Lovable Cloud auth |
+| `supabase/` | Database migrations and config |
+
+---
+
+<details>
+<summary>🚀 <strong>Installation</strong></summary>
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18+)
+- npm or bun
+
+### Steps
+
+```bash
+# 1. Clone the repository
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
+# 2. Navigate to the project
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
-npm i
+# 3. Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 4. Start the development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app will be available at `http://localhost:5173`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+</details>
 
-**Use GitHub Codespaces**
+<details>
+<summary>⚙️ <strong>Development</strong></summary>
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Available Scripts
 
-## What technologies are used for this project?
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server with HMR |
+| `npm run build` | Production build |
+| `npm run build:dev` | Development build |
+| `npm run lint` | Run ESLint |
+| `npm run test` | Run tests (Vitest) |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run preview` | Preview production build |
 
-This project is built with:
+### Environment Variables
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+The project uses Lovable Cloud, which auto-configures the `.env` file with:
 
-## How can I deploy this project?
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_SUPABASE_PROJECT_ID`
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+> ⚠️ Do not manually edit `.env`, `supabase/config.toml`, or auto-generated integration files.
 
-## Can I connect a custom domain to my Lovable project?
+</details>
 
-Yes, you can!
+---
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🎬 Demo
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+<p align="center">
+  <img src="docs/demo.gif" alt="Demo Walkthrough" width="80%" />
+</p>
+
+---
+
+## 📄 License
+
+This is a private internal tool. All rights reserved.
+
+---
+
+<p align="center">Built with ❤️ using <a href="https://lovable.dev">Lovable</a></p>
