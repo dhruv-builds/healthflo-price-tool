@@ -1,69 +1,33 @@
 
 
-# Add User Role Management Panel (Admin Only)
+# README.md Generation Plan
 
-## The Problem
-Currently, roles are auto-assigned (first user = admin, everyone else = employee) with no way to change them afterward. You need an admin panel to promote or demote users.
+This is not a Chrome extension or prompt engineering tool — it's an internal healthcare enterprise pricing and CRM platform called **HealthFlo**. The README will accurately reflect the actual project.
 
-## What Will Change
+## What the README Will Cover
 
-### New Page: User Management (`/admin/users`)
-- Accessible only to admins, via a "Manage Users" link in the top bar
-- Displays a table of all users (email, role, signup date)
-- Each row has a dropdown to switch between "admin" and "employee"
-- Changes are saved immediately to the database
+**Hero**: HealthFlo branding with banner placeholder and shields.io badges for React, TypeScript, Vite, Tailwind CSS, Supabase, and shadcn/ui.
 
-### Database Changes
-- A new RLS policy on `user_roles` allowing admins to update roles
-- A new RLS policy on `profiles` allowing admins to read all profiles (currently users can only see their own)
+**Core Value Proposition**: Internal enterprise tool for healthcare pricing modeling and CRM — built for founder/growth teams managing hospital, clinic, and doctor relationships.
 
-### UI Changes
-- **TopBar**: Add a "Manage Users" button (visible to admins only)
-- **App.tsx**: Add a protected `/admin/users` route
+**Two Modules**:
+1. **Pricing Tool** — Multi-tier discount modeling, INR/USD currency support with live FX rates, overage analysis, unit economics (admin-only), implementation cost modeling, Excel export, client/version management, presentation mode.
+2. **CRM Module** — Account management (Hospital/Clinic/Doctor), contacts, opportunities with pipeline stages, activity timeline with attachments, manual tasks, account-level documents/links, lightweight reporting, manual pricing client linkage.
 
----
+**Tech Stack Table**: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, Supabase (auth + Postgres + storage + RLS), TanStack React Query, react-router-dom v6, xlsx, recharts.
 
-## Technical Details
+**Features Table**: Structured feature list with bold names and descriptions.
 
-### 1. Database Migration (SQL)
+**Project Structure Table**: Key directories and their purposes.
 
-Two new RLS policies:
+**Collapsible Sections**: Installation and Development steps wrapped in `<details>` tags.
 
-```sql
--- Allow admins to read all profiles
-CREATE POLICY "Admins can read all profiles"
-ON public.profiles FOR SELECT
-TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
+**Auth & Security**: Email/password + Google OAuth, admin approval gating, role-based access (admin/employee), RLS on all tables.
 
--- Allow admins to update user roles
-CREATE POLICY "Admins can update roles"
-ON public.user_roles FOR UPDATE
-TO authenticated
-USING (public.has_role(auth.uid(), 'admin'))
-WITH CHECK (public.has_role(auth.uid(), 'admin'));
+**Media Placeholders**: Banner image and demo GIF placeholders.
 
--- Allow admins to read all roles
-CREATE POLICY "Admins can read all roles"
-ON public.user_roles FOR SELECT
-TO authenticated
-USING (public.has_role(auth.uid(), 'admin'));
-```
+## File Change
+- Overwrite `README.md` with the generated content.
 
-### 2. New File: `src/pages/AdminUsers.tsx`
-- Fetches all profiles and their roles (joined)
-- Renders a table with columns: Email, Role (dropdown), Joined
-- Dropdown calls `supabase.from('user_roles').update({ role }).eq('user_id', userId)`
-- Shows toast on success/error
-- Wrapped in admin-only check (redirects non-admins)
-
-### 3. Modified File: `src/App.tsx`
-- Add route: `/admin/users` pointing to `AdminUsers`, wrapped in `ProtectedRoute`
-
-### 4. Modified File: `src/components/pricing/TopBar.tsx`
-- Add a "Manage Users" icon button (e.g., Users icon from lucide) visible when `role === "admin"`
-- Links to `/admin/users`
-
-### 5. Modified File: `src/contexts/AuthContext.tsx`
-- No changes needed; role is already exposed
+Single file, no other changes needed.
 
