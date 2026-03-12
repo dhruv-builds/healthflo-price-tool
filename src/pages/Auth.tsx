@@ -19,8 +19,8 @@ export default function Auth() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
+      </div>);
+
   }
 
   if (user) return <Navigate to="/" replace />;
@@ -33,7 +33,7 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: window.location.origin }
         });
         if (error) throw error;
         toast.success("Check your email to confirm your account!");
@@ -50,7 +50,7 @@ export default function Auth() {
 
   const handleGoogle = async () => {
     const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: window.location.origin
     });
     if (error) toast.error(error.message);
   };
@@ -60,7 +60,7 @@ export default function Auth() {
       <div className="w-full max-w-sm space-y-6 rounded-lg border bg-card p-8 shadow-sm">
         <div className="text-center">
           <h1 className="text-lg font-bold text-primary">HealthFlo</h1>
-          <p className="text-sm text-muted-foreground">Enterprise Pricing Tool</p>
+          <p className="text-sm text-muted-foreground">Enterprise CRM Tool</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -93,6 +93,6 @@ export default function Auth() {
           </button>
         </p>
       </div>
-    </div>
-  );
+    </div>);
+
 }
