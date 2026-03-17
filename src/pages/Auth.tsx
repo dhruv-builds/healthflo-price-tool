@@ -59,7 +59,7 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-muted/30">
       <div className="w-full max-w-sm space-y-6 rounded-lg border bg-card p-8 shadow-sm">
         <div className="text-center">
-          <h1 className="text-lg font-bold text-primary">HealthFlo</h1>
+          <h1 className="text-lg font-bold text-primary">NileFlow</h1>
           <p className="text-sm text-muted-foreground">Enterprise CRM Tool</p>
         </div>
 
