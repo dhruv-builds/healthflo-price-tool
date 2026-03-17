@@ -13,7 +13,7 @@ export function GlobalHeader() {
     <div className="sticky top-0 z-20 flex items-center justify-between border-b bg-card px-6 py-3 shadow-sm">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-primary">HealthFlo</span>
+          <span className="text-sm font-semibold text-primary">NileFlow</span>
           <span className="text-xs text-muted-foreground">Enterprise Suite</span>
         </div>
 
