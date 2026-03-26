@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Pencil, UserPlus, MessageSquarePlus, ListPlus, TrendingUp, FileText, ExternalLink, Link } from "lucide-react";
+import { StatusBadgeDropdown } from "@/components/crm/StatusBadgeDropdown";
 import { AccountForm } from "@/components/crm/AccountForm";
 import { ContactsList } from "@/components/crm/ContactsList";
 import { ContactForm } from "@/components/crm/ContactForm";
@@ -73,7 +74,7 @@ export default function AccountDetail() {
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-semibold">{account.name}</h1>
               <Badge variant="secondary">{account.account_type}</Badge>
-              <Badge variant="outline">{account.status}</Badge>
+              <StatusBadgeDropdown accountId={account.id} currentStatus={account.status} />
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
               {account.source}{account.geography ? ` · ${account.geography}` : ""}

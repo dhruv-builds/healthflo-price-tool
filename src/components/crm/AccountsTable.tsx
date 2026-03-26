@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CrmAccount } from "@/types/crm";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import { format } from "date-fns";
+import { StatusBadgeDropdown } from "./StatusBadgeDropdown";
 
 interface AccountsTableProps {
   accounts: CrmAccount[];
@@ -85,9 +85,7 @@ export function AccountsTable({ accounts, isLoading }: AccountsTableProps) {
               <TableCell className="text-xs text-muted-foreground">{a.source}</TableCell>
               <TableCell className="text-xs text-muted-foreground">{a.geography || "—"}</TableCell>
               <TableCell>
-                <Badge variant="secondary" className={statusColors[a.status] || ""}>
-                  {a.status}
-                </Badge>
+                <StatusBadgeDropdown accountId={a.id} currentStatus={a.status} />
               </TableCell>
               <TableCell className="text-xs text-muted-foreground">
                 {a.last_activity_at ? format(new Date(a.last_activity_at), "MMM d, yyyy") : "—"}
