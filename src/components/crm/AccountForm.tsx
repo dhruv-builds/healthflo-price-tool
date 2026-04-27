@@ -29,9 +29,11 @@ interface AccountFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   account?: CrmAccount | null;
+  defaultName?: string;
+  onCreated?: (account: CrmAccount) => void;
 }
 
-export function AccountForm({ open, onOpenChange, account }: AccountFormProps) {
+export function AccountForm({ open, onOpenChange, account, defaultName, onCreated }: AccountFormProps) {
   const { user } = useAuth();
   const createAccount = useCreateAccount();
   const updateAccount = useUpdateAccount();
@@ -40,7 +42,7 @@ export function AccountForm({ open, onOpenChange, account }: AccountFormProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: account?.name ?? "",
+      name: account?.name ?? defaultName ?? "",
       account_type: account?.account_type ?? "Hospital",
       source: account?.source ?? "Founder Network",
       referrer_name: account?.referrer_name ?? "",
@@ -66,7 +68,8 @@ export function AccountForm({ open, onOpenChange, account }: AccountFormProps) {
     if (isEdit && account) {
       await updateAccount.mutateAsync({ id: account.id, ...payload, updated_by: user.id });
     } else {
-      await createAccount.mutateAsync({ ...payload, owner_id: user.id, created_by: user.id, updated_by: user.id } as any);
+      const created = await createAccount.mutateAsync({ ...payload, owner_id: user.id, created_by: user.id, updated_by: user.id } as any);
+      if (onCreated && created) onCreated(created);
     }
     onOpenChange(false);
     form.reset();

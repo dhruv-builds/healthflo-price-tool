@@ -89,3 +89,22 @@ Clicking "Open in Pricing" from a CRM account navigates to `/?clientId={uuid}`. 
 
 ### Needs Attention rules (deterministic)
 A workflow is flagged when any of: next action overdue, no next action set, `is_blocked = true`, stage stale > 14 days, or stage requires pricing reference (`Pricing` / `Negotiation` / `Pricing Agreement`) and `reference_version_id` is null.
+
+---
+
+## Pricing → CRM linking prompt (added 2026-04-27)
+
+Triggered on the success of `createClient` inside `ClientLibrary` (i.e. after the **first save** of a brand-new pricing client, since Pricing creates the client + first version atomically).
+
+1. Modal asks: *"Link this pricing to a CRM account?"* with three actions.
+2. **Link to Existing Account** — searchable list filtered to accounts without a link (or already linked to this client).
+3. **Create New Account** — opens `AccountForm` pre-filled with the pricing client's name via the new `defaultName` prop; on success, `onCreated` auto-links the new account.
+4. **Skip for Now** — dismisses; the client id is added to a per-session `skippedClientIds` Set so the prompt doesn't re-fire in the same session.
+
+## Seed Review (added 2026-04-27)
+
+Workflow Home → **Seed Review** tab.
+
+- Lists workflows where `seed_confidence IS NOT NULL`.
+- Each card shows account name, seeded stage, next action, blocker, seed notes, and a confidence badge (`confirmed` / `inferred` / `needs_review`).
+- Actions per card: **Confirm** (sets confidence to `confirmed`), **Edit** (navigates to `AccountDetail` Workflow tab), **Needs Review** (sets confidence to `needs_review`).

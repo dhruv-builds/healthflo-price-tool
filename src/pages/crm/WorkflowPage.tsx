@@ -7,9 +7,10 @@ import { useCrmAccounts } from "@/hooks/useCrmAccounts";
 import { useAuth } from "@/contexts/AuthContext";
 import { WorkflowList } from "@/components/crm/WorkflowList";
 import { WorkflowBoard } from "@/components/crm/WorkflowBoard";
+import { WorkflowSeedReview } from "@/components/crm/WorkflowSeedReview";
 import { WORKFLOW_STAGES, type WorkflowStage, getAttentionReasons } from "@/types/workflow";
 
-type View = "all" | "queue" | "attention" | "board";
+type View = "all" | "queue" | "attention" | "board" | "seed";
 
 export default function WorkflowPage() {
   const { user } = useAuth();
@@ -63,10 +64,11 @@ export default function WorkflowPage() {
             <TabsTrigger value="queue">My Queue</TabsTrigger>
             <TabsTrigger value="attention">Needs Attention</TabsTrigger>
             <TabsTrigger value="board">Board</TabsTrigger>
+            <TabsTrigger value="seed">Seed Review</TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {view !== "board" && (
+        {view !== "board" && view !== "seed" && (
           <Select value={stageFilter} onValueChange={setStageFilter}>
             <SelectTrigger className="w-44"><SelectValue placeholder="Stage" /></SelectTrigger>
             <SelectContent>
@@ -79,6 +81,8 @@ export default function WorkflowPage() {
 
       {view === "board" ? (
         <WorkflowBoard workflows={filtered} accountsById={accountsById} />
+      ) : view === "seed" ? (
+        <WorkflowSeedReview workflows={workflows} accountsById={accountsById} />
       ) : (
         <WorkflowList workflows={filtered} accountsById={accountsById} isLoading={isLoading} />
       )}
