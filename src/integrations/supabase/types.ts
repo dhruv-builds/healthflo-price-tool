@@ -35,6 +35,270 @@ export type Database = {
         }
         Relationships: []
       }
+      commercial_account_profiles: {
+        Row: {
+          account_id: string
+          address: string | null
+          city: string | null
+          client_legal_name: string | null
+          country: string | null
+          created_at: string
+          created_by: string
+          defaults_json: Json
+          display_name: string | null
+          id: string
+          legal_notes: string | null
+          preferred_subtitle: string | null
+          primary_logo_path: string | null
+          secondary_logo_path: string | null
+          signatory_email: string | null
+          signatory_name: string | null
+          signatory_title: string | null
+          state: string | null
+          updated_at: string
+          updated_by: string | null
+          vendor_legal_name: string | null
+          vendor_logo_path: string | null
+          vendor_signatory_name: string | null
+          vendor_signatory_title: string | null
+        }
+        Insert: {
+          account_id: string
+          address?: string | null
+          city?: string | null
+          client_legal_name?: string | null
+          country?: string | null
+          created_at?: string
+          created_by: string
+          defaults_json?: Json
+          display_name?: string | null
+          id?: string
+          legal_notes?: string | null
+          preferred_subtitle?: string | null
+          primary_logo_path?: string | null
+          secondary_logo_path?: string | null
+          signatory_email?: string | null
+          signatory_name?: string | null
+          signatory_title?: string | null
+          state?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          vendor_legal_name?: string | null
+          vendor_logo_path?: string | null
+          vendor_signatory_name?: string | null
+          vendor_signatory_title?: string | null
+        }
+        Update: {
+          account_id?: string
+          address?: string | null
+          city?: string | null
+          client_legal_name?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string
+          defaults_json?: Json
+          display_name?: string | null
+          id?: string
+          legal_notes?: string | null
+          preferred_subtitle?: string | null
+          primary_logo_path?: string | null
+          secondary_logo_path?: string | null
+          signatory_email?: string | null
+          signatory_name?: string | null
+          signatory_title?: string | null
+          state?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          vendor_legal_name?: string | null
+          vendor_logo_path?: string | null
+          vendor_signatory_name?: string | null
+          vendor_signatory_title?: string | null
+        }
+        Relationships: []
+      }
+      commercial_document_exports: {
+        Row: {
+          document_id: string
+          exported_at: string
+          exported_by: string
+          file_path: string
+          file_size_bytes: number | null
+          format: Database["public"]["Enums"]["commercial_export_format"]
+          id: string
+        }
+        Insert: {
+          document_id: string
+          exported_at?: string
+          exported_by: string
+          file_path: string
+          file_size_bytes?: number | null
+          format: Database["public"]["Enums"]["commercial_export_format"]
+          id?: string
+        }
+        Update: {
+          document_id?: string
+          exported_at?: string
+          exported_by?: string
+          file_path?: string
+          file_size_bytes?: number | null
+          format?: Database["public"]["Enums"]["commercial_export_format"]
+          id?: string
+        }
+        Relationships: []
+      }
+      commercial_documents: {
+        Row: {
+          account_id: string
+          content_json: Json
+          created_at: string
+          created_by: string
+          derived_from_document_id: string | null
+          doc_type: Database["public"]["Enums"]["commercial_doc_type"]
+          exported_at: string | null
+          generation_mode: Database["public"]["Enums"]["commercial_generation_mode"]
+          id: string
+          inherited_profile_snapshot: Json
+          linked_client_id: string | null
+          linked_version_id: string | null
+          manual_overrides: Json
+          notes: string | null
+          status: Database["public"]["Enums"]["commercial_doc_status"]
+          template_id: string | null
+          template_version_id: string | null
+          title: string
+          unresolved_fields: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          content_json: Json
+          created_at?: string
+          created_by: string
+          derived_from_document_id?: string | null
+          doc_type: Database["public"]["Enums"]["commercial_doc_type"]
+          exported_at?: string | null
+          generation_mode?: Database["public"]["Enums"]["commercial_generation_mode"]
+          id?: string
+          inherited_profile_snapshot?: Json
+          linked_client_id?: string | null
+          linked_version_id?: string | null
+          manual_overrides?: Json
+          notes?: string | null
+          status?: Database["public"]["Enums"]["commercial_doc_status"]
+          template_id?: string | null
+          template_version_id?: string | null
+          title: string
+          unresolved_fields?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          content_json?: Json
+          created_at?: string
+          created_by?: string
+          derived_from_document_id?: string | null
+          doc_type?: Database["public"]["Enums"]["commercial_doc_type"]
+          exported_at?: string | null
+          generation_mode?: Database["public"]["Enums"]["commercial_generation_mode"]
+          id?: string
+          inherited_profile_snapshot?: Json
+          linked_client_id?: string | null
+          linked_version_id?: string | null
+          manual_overrides?: Json
+          notes?: string | null
+          status?: Database["public"]["Enums"]["commercial_doc_status"]
+          template_id?: string | null
+          template_version_id?: string | null
+          title?: string
+          unresolved_fields?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      commercial_template_versions: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_current: boolean
+          published_at: string | null
+          structure_json: Json
+          template_id: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_current?: boolean
+          published_at?: string | null
+          structure_json: Json
+          template_id: string
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_current?: boolean
+          published_at?: string | null
+          structure_json?: Json
+          template_id?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
+      commercial_templates: {
+        Row: {
+          account_id: string | null
+          base_template_id: string | null
+          created_at: string
+          created_by: string
+          default_generation_mode: Database["public"]["Enums"]["commercial_generation_mode"]
+          description: string | null
+          doc_type: Database["public"]["Enums"]["commercial_doc_type"]
+          id: string
+          name: string
+          scope: Database["public"]["Enums"]["commercial_template_scope"]
+          status: Database["public"]["Enums"]["commercial_template_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          base_template_id?: string | null
+          created_at?: string
+          created_by: string
+          default_generation_mode?: Database["public"]["Enums"]["commercial_generation_mode"]
+          description?: string | null
+          doc_type: Database["public"]["Enums"]["commercial_doc_type"]
+          id?: string
+          name: string
+          scope?: Database["public"]["Enums"]["commercial_template_scope"]
+          status?: Database["public"]["Enums"]["commercial_template_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          base_template_id?: string | null
+          created_at?: string
+          created_by?: string
+          default_generation_mode?: Database["public"]["Enums"]["commercial_generation_mode"]
+          description?: string | null
+          doc_type?: Database["public"]["Enums"]["commercial_doc_type"]
+          id?: string
+          name?: string
+          scope?: Database["public"]["Enums"]["commercial_template_scope"]
+          status?: Database["public"]["Enums"]["commercial_template_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       crm_accounts: {
         Row: {
           account_type: Database["public"]["Enums"]["crm_account_type"]
@@ -786,6 +1050,20 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "employee"
+      commercial_doc_status:
+        | "draft"
+        | "needs_review"
+        | "final"
+        | "superseded"
+        | "signed_uploaded"
+      commercial_doc_type: "mou" | "pricing_addendum"
+      commercial_export_format: "pdf" | "docx"
+      commercial_generation_mode:
+        | "auto_from_pricing"
+        | "structure_only"
+        | "selective_fill"
+      commercial_template_scope: "global" | "account"
+      commercial_template_status: "draft" | "published" | "archived"
       crm_account_status:
         | "Active"
         | "Dormant"
@@ -962,6 +1240,22 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "employee"],
+      commercial_doc_status: [
+        "draft",
+        "needs_review",
+        "final",
+        "superseded",
+        "signed_uploaded",
+      ],
+      commercial_doc_type: ["mou", "pricing_addendum"],
+      commercial_export_format: ["pdf", "docx"],
+      commercial_generation_mode: [
+        "auto_from_pricing",
+        "structure_only",
+        "selective_fill",
+      ],
+      commercial_template_scope: ["global", "account"],
+      commercial_template_status: ["draft", "published", "archived"],
       crm_account_status: [
         "Active",
         "Dormant",
