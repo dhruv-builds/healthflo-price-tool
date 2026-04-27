@@ -98,23 +98,53 @@ function tiptapToPlainParagraphs(doc?: TiptapDoc): { text: string; marks: string
 }
 
 // ---------- DOCX renderer ----------
-function tiptapToDocxParagraphs(body?: TiptapDoc): Paragraph[] {
-  const paras = tiptapToPlainParagraphs(body);
-  return paras.map(
-    (runs) =>
-      new Paragraph({
+// Walks tiptap and emits Paragraphs that respect bullet/numbered list semantics
+// using docx-js native numbering references (no manual "•" or "1." prefixes).
+function tiptapToDocxBlocks(body?: TiptapDoc): Paragraph[] {
+  if (!body) return [new Paragraph({ children: [new TextRun("")] })];
+  const out: Paragraph[] = [];
+  const runFromTextNode = (n: TiptapNode): TextRun =>
+    new TextRun({
+      text: n.text ?? "",
+      bold: (n.marks ?? []).some((m) => m.type === "bold"),
+      italics: (n.marks ?? []).some((m) => m.type === "italic"),
+      underline: (n.marks ?? []).some((m) => m.type === "underline") ? {} : undefined,
+    });
+  const collectInline = (node: TiptapNode): TextRun[] => {
+    const runs: TextRun[] = [];
+    const walk = (n: TiptapNode) => {
+      if (n.type === "text") runs.push(runFromTextNode(n));
+      else if (n.content) n.content.forEach(walk);
+    };
+    node.content?.forEach(walk);
+    return runs.length ? runs : [new TextRun("")];
+  };
+  const walkBlock = (node: TiptapNode, listCtx?: "bullet" | "number") => {
+    if (!node) return;
+    if (node.type === "paragraph" || node.type === "heading") {
+      const opts: any = {
         spacing: { after: 120 },
-        children: runs.map(
-          (r) =>
-            new TextRun({
-              text: r.text,
-              bold: r.marks.includes("bold"),
-              italics: r.marks.includes("italic"),
-              underline: r.marks.includes("underline") ? {} : undefined,
-            })
-        ),
-      })
-  );
+        children: collectInline(node),
+      };
+      if (listCtx === "bullet") opts.numbering = { reference: "doc-bullets", level: 0 };
+      else if (listCtx === "number") opts.numbering = { reference: "doc-numbers", level: 0 };
+      out.push(new Paragraph(opts));
+    } else if (node.type === "bulletList") {
+      node.content?.forEach((li) => li.content?.forEach((p) => walkBlock(p, "bullet")));
+    } else if (node.type === "orderedList") {
+      node.content?.forEach((li) => li.content?.forEach((p) => walkBlock(p, "number")));
+    } else if (node.content) {
+      node.content.forEach((c) => walkBlock(c, listCtx));
+    }
+  };
+  body.content?.forEach((c) => walkBlock(c));
+  if (!out.length) out.push(new Paragraph({ children: [new TextRun("")] }));
+  return out;
+}
+
+// Backward-compatible alias used by existing callers
+function tiptapToDocxParagraphs(body?: TiptapDoc): Paragraph[] {
+  return tiptapToDocxBlocks(body);
 }
 
 function makeDocxTable(headers: string[], rows: string[][], totalWidth = 9360): Table {
