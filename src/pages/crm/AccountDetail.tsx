@@ -39,6 +39,7 @@ export default function AccountDetail() {
   const { data: tasks = [], isLoading: tasksLoading } = useCrmTasks({ account_id: id ?? undefined });
   const { data: documents = [], isLoading: docsLoading } = useCrmDocuments(id ?? null);
   const { data: clients = [] } = useClients();
+  const { data: workflow } = useWorkflowByAccount(id ?? null);
   const updateAccount = useUpdateAccount();
 
   const [showEditAccount, setShowEditAccount] = useState(false);
