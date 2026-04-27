@@ -261,14 +261,16 @@ function CoverEditor({ cover, onChange }: { cover: NonNullable<DocumentDoc["cove
         <Field label="Title" value={cover.title} onChange={(v) => onChange({ ...cover, title: v })} />
         <Field label="Subtitle" value={cover.subtitle ?? ""} onChange={(v) => onChange({ ...cover, subtitle: v })} />
         <div className="col-span-2 grid grid-cols-2 gap-3">
-          <PartyEditor label="Vendor party" party={cover.vendorParty} onChange={(p) => onChange({ ...cover, vendorParty: p })} />
-          <PartyEditor label="Client party" party={cover.clientParty} onChange={(p) => onChange({ ...cover, clientParty: p })} />
+          <PartyEditor label="First Party (Vendor)" party={cover.vendorParty} onChange={(p) => onChange({ ...cover, vendorParty: p })} />
+          <PartyEditor label="Second Party (Client)" party={cover.clientParty} onChange={(p) => onChange({ ...cover, clientParty: p })} />
         </div>
+        <Field label="Execution location (city, state, country)" value={cover.executionLocation ?? ""} onChange={(v) => onChange({ ...cover, executionLocation: v })} />
         <div className="space-y-1">
           <Label className="text-xs">Variant</Label>
           <Select value={cover.variant} onValueChange={(v) => onChange({ ...cover, variant: v as any })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="branded_split">Branded split (recommended)</SelectItem>
               <SelectItem value="two_party_centered">Two party · centered</SelectItem>
               <SelectItem value="two_party_left">Two party · left</SelectItem>
             </SelectContent>
@@ -300,20 +302,118 @@ function PartyEditor({ label, party, onChange }: { label: string; party: { legal
   );
 }
 
-// ----- MoU sections -----
+// ----- MoU sections (with optional subsections + facility coverage) -----
 function SectionEditor({ section, onChange }: { section: Section; onChange: (s: Section) => void }) {
+  const hasSubs = !!section.subsections && section.subsections.length > 0;
   return (
-    <Card className="p-4 space-y-2">
+    <Card className="p-4 space-y-3">
       <Input
         value={section.title}
         onChange={(e) => onChange({ ...section, title: e.target.value, customized: true })}
         className="font-semibold"
       />
-      <RichTextEditor
-        value={section.body}
-        onChange={(body) => onChange({ ...section, body, customized: true })}
-      />
+      {!hasSubs && (
+        <RichTextEditor
+          value={section.body}
+          onChange={(body) => onChange({ ...section, body, customized: true })}
+        />
+      )}
+      {hasSubs && (
+        <div className="space-y-3">
+          {section.subsections!.map((ss, j) => (
+            <div key={ss.id} className="rounded-md border p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs font-mono">{ss.number ?? `${j + 1}`}</Badge>
+                <Input
+                  value={ss.title}
+                  onChange={(e) => {
+                    const subs = section.subsections!.map((x, k) => k === j ? { ...x, title: e.target.value } : x);
+                    onChange({ ...section, subsections: subs, customized: true });
+                  }}
+                  className="h-7 text-sm font-medium"
+                />
+                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive"
+                  onClick={() => onChange({ ...section, subsections: section.subsections!.filter((_, k) => k !== j), customized: true })}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <RichTextEditor
+                value={ss.body}
+                onChange={(body) => {
+                  const subs = section.subsections!.map((x, k) => k === j ? { ...x, body } : x);
+                  onChange({ ...section, subsections: subs, customized: true });
+                }}
+              />
+            </div>
+          ))}
+          <Button size="sm" variant="outline"
+            onClick={() => onChange({
+              ...section,
+              subsections: [...section.subsections!, { id: newId(), title: "New subsection", body: emptyTiptap() }],
+              customized: true,
+            })}>
+            <Plus className="h-3 w-3 mr-1" />Add subsection
+          </Button>
+        </div>
+      )}
+      {section.coverage && (
+        <CoverageEditor coverage={section.coverage} onChange={(coverage) => onChange({ ...section, coverage, customized: true })} />
+      )}
     </Card>
+  );
+}
+
+function CoverageEditor({ coverage, onChange }: { coverage: NonNullable<Section["coverage"]>; onChange: (c: NonNullable<Section["coverage"]>) => void }) {
+  const flag = coverage.totalCount == null || coverage.rows.length === 0;
+  return (
+    <div className="rounded-md border border-dashed p-3 space-y-3 bg-muted/30">
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-semibold">Coverage of Facilities (3.2)</div>
+        {flag && <span className="text-[10px] text-amber-700 dark:text-amber-400">⚠ needs client values</span>}
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="col-span-1 space-y-1">
+          <Label className="text-xs">Total facility count</Label>
+          <Input type="number" min={0} value={coverage.totalCount ?? ""}
+            onChange={(e) => onChange({ ...coverage, totalCount: e.target.value === "" ? undefined : Number(e.target.value) })} />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="text-[11px] font-medium text-muted-foreground">Facility types</div>
+        {coverage.rows.length === 0 && <p className="text-xs text-muted-foreground italic">No facility types added yet.</p>}
+        {coverage.rows.map((row, i) => (
+          <div key={row.id} className="grid grid-cols-12 gap-2 items-start">
+            <Input className="col-span-2 h-8" type="number" min={0} placeholder="Count" value={row.count ?? ""}
+              onChange={(e) => {
+                const rows = coverage.rows.map((r, j) => j === i ? { ...r, count: e.target.value === "" ? undefined : Number(e.target.value) } : r);
+                onChange({ ...coverage, rows });
+              }} />
+            <Input className="col-span-3 h-8" placeholder="Label" value={row.label}
+              onChange={(e) => {
+                const rows = coverage.rows.map((r, j) => j === i ? { ...r, label: e.target.value } : r);
+                onChange({ ...coverage, rows });
+              }} />
+            <Input className="col-span-6 h-8" placeholder="Description" value={row.description ?? ""}
+              onChange={(e) => {
+                const rows = coverage.rows.map((r, j) => j === i ? { ...r, description: e.target.value } : r);
+                onChange({ ...coverage, rows });
+              }} />
+            <Button size="sm" variant="ghost" className="col-span-1 h-8 w-8 p-0 text-destructive"
+              onClick={() => onChange({ ...coverage, rows: coverage.rows.filter((_, j) => j !== i) })}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ))}
+        <Button size="sm" variant="outline"
+          onClick={() => onChange({ ...coverage, rows: [...coverage.rows, { id: newId(), label: "", count: undefined }] })}>
+          <Plus className="h-3 w-3 mr-1" />Add facility type
+        </Button>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs">Notes (optional)</Label>
+        <RichTextEditor value={coverage.notes ?? emptyTiptap()} onChange={(notes) => onChange({ ...coverage, notes })} />
+      </div>
+    </div>
   );
 }
 
@@ -472,10 +572,16 @@ function SignatureEditor({ sig, onChange }: { sig: NonNullable<DocumentDoc["sign
   return (
     <Card className="p-4 space-y-3">
       <div className="text-sm font-semibold">Signature page</div>
+      <Field
+        label="Witness clause"
+        value={sig.witnessClause ?? ""}
+        onChange={(v) => onChange({ ...sig, witnessClause: v })}
+        multiline
+      />
       <div className="grid grid-cols-2 gap-3">
         {(["partyA", "partyB"] as const).map((k) => (
           <div key={k} className="space-y-2 rounded-md border p-2">
-            <div className="text-xs font-medium">{k === "partyA" ? "Party A (Vendor)" : "Party B (Client)"}</div>
+            <div className="text-xs font-medium">{k === "partyA" ? "First Party (Vendor)" : "Second Party (Client)"}</div>
             <Field label="Legal name" value={sig[k].legalName} onChange={(v) => onChange({ ...sig, [k]: { ...sig[k], legalName: v } })} />
             <Field label="Signatory name" value={sig[k].signatoryName} onChange={(v) => onChange({ ...sig, [k]: { ...sig[k], signatoryName: v } })} />
             <Field label="Designation" value={sig[k].designation} onChange={(v) => onChange({ ...sig, [k]: { ...sig[k], designation: v } })} />
