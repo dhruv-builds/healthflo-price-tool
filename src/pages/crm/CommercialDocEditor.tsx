@@ -572,10 +572,16 @@ function SignatureEditor({ sig, onChange }: { sig: NonNullable<DocumentDoc["sign
   return (
     <Card className="p-4 space-y-3">
       <div className="text-sm font-semibold">Signature page</div>
+      <Field
+        label="Witness clause"
+        value={sig.witnessClause ?? ""}
+        onChange={(v) => onChange({ ...sig, witnessClause: v })}
+        multiline
+      />
       <div className="grid grid-cols-2 gap-3">
         {(["partyA", "partyB"] as const).map((k) => (
           <div key={k} className="space-y-2 rounded-md border p-2">
-            <div className="text-xs font-medium">{k === "partyA" ? "Party A (Vendor)" : "Party B (Client)"}</div>
+            <div className="text-xs font-medium">{k === "partyA" ? "First Party (Vendor)" : "Second Party (Client)"}</div>
             <Field label="Legal name" value={sig[k].legalName} onChange={(v) => onChange({ ...sig, [k]: { ...sig[k], legalName: v } })} />
             <Field label="Signatory name" value={sig[k].signatoryName} onChange={(v) => onChange({ ...sig, [k]: { ...sig[k], signatoryName: v } })} />
             <Field label="Designation" value={sig[k].designation} onChange={(v) => onChange({ ...sig, [k]: { ...sig[k], designation: v } })} />
