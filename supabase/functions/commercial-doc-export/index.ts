@@ -1071,24 +1071,37 @@ function renderPrimitivePdf(p: any): any[] {
 function renderSignatoryPdf(sig: any): any[] {
   if (!sig) return [];
   return [
-    { text: sig.legalName ?? "", bold: true, margin: [0, 16, 0, 4] },
+    {
+      text: [
+        { text: "For ", italics: true },
+        { text: sig.legalName ?? "", bold: true },
+      ],
+      margin: [0, 16, 0, 4],
+    },
     {
       canvas: [
-        { type: "line", x1: 0, y1: 24, x2: 220, y2: 24, lineWidth: 0.7, lineColor: "#000" },
+        { type: "line", x1: 0, y1: 30, x2: 220, y2: 30, lineWidth: 0.7, lineColor: "#000" },
       ],
     },
-    { text: sig.signatoryName ?? "", margin: [0, 4, 0, 0] },
-    { text: sig.designation ?? "", italics: true },
-    sig.date ? { text: `Date: ${sig.date}` } : { text: "" },
+    { text: [{ text: "Name: ", bold: true }, { text: sig.signatoryName ?? "" }], margin: [0, 6, 0, 0] },
+    { text: [{ text: "Designation: ", bold: true }, { text: sig.designation ?? "", italics: true }] },
+    { text: [{ text: "Date: ", bold: true }, { text: sig.date ?? "" }] },
   ];
 }
 
 function renderSignaturePagePdf(sig: any): any[] {
   return [
     { text: "", pageBreak: "before" },
-    { text: "Signatures", fontSize: 18, bold: true, alignment: "center", margin: [0, 0, 0, 16] },
+    { text: "Signatures", fontSize: 18, bold: true, alignment: "center", margin: [0, 0, 0, 12] },
+    sig.witnessClause
+      ? { text: sig.witnessClause, italics: true, alignment: "justify", margin: [0, 0, 0, 24] }
+      : { text: "" },
     sig.effectiveDate
-      ? { text: `Effective Date: ${sig.effectiveDate}`, alignment: "center", margin: [0, 0, 0, 24] }
+      ? {
+          text: [{ text: "Effective Date: ", bold: true }, { text: sig.effectiveDate }],
+          alignment: "center",
+          margin: [0, 0, 0, 24],
+        }
       : { text: "" },
     {
       columns: [
@@ -1109,12 +1122,20 @@ async function renderPdf(doc: DocumentDoc): Promise<Uint8Array> {
   if (doc.signature) content.push(...renderSignaturePagePdf(doc.signature));
   if (!content.length) content.push({ text: doc.meta?.title ?? "Document" });
 
+  const docTitle = doc.meta?.title ?? "Document";
   const docDef = {
     pageSize: "LETTER",
     pageMargins: [60, 60, 60, 60],
     defaultStyle: { font: "Roboto", fontSize: 10 },
-    info: { title: doc.meta?.title ?? "Document", creator: "HealthFlo" },
+    info: { title: docTitle, creator: "HealthFlo" },
     content,
+    footer: (currentPage: number, pageCount: number) => ({
+      text: `${docTitle}  ·  Page ${currentPage} of ${pageCount}`,
+      alignment: "center",
+      fontSize: 8,
+      color: "#808080",
+      margin: [0, 20, 0, 0],
+    }),
   };
 
   return await new Promise<Uint8Array>((resolve, reject) => {
