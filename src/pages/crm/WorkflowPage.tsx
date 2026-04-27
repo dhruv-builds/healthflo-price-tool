@@ -7,9 +7,10 @@ import { useCrmAccounts } from "@/hooks/useCrmAccounts";
 import { useAuth } from "@/contexts/AuthContext";
 import { WorkflowList } from "@/components/crm/WorkflowList";
 import { WorkflowBoard } from "@/components/crm/WorkflowBoard";
+import { WorkflowSeedReview } from "@/components/crm/WorkflowSeedReview";
 import { WORKFLOW_STAGES, type WorkflowStage, getAttentionReasons } from "@/types/workflow";
 
-type View = "all" | "queue" | "attention" | "board";
+type View = "all" | "queue" | "attention" | "board" | "seed";
 
 export default function WorkflowPage() {
   const { user } = useAuth();
