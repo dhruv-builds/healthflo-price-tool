@@ -182,6 +182,21 @@ export function ClientLibrary({ inputs, setInputs, activeClientId, activeVersion
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Pricing → CRM linking prompt (after first save of a brand-new client) */}
+      {linkPrompt && (
+        <PricingLinkPrompt
+          open={!!linkPrompt}
+          onOpenChange={(v) => {
+            if (!v) {
+              setSkippedClientIds((prev) => new Set(prev).add(linkPrompt.id));
+              setLinkPrompt(null);
+            }
+          }}
+          clientId={linkPrompt.id}
+          clientName={linkPrompt.name}
+        />
+      )}
     </div>
   );
 }
