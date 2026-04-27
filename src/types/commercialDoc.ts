@@ -116,12 +116,24 @@ export const MOU_SECTION_LABELS: Record<MouSectionKey, string> = {
   miscellaneous: "Miscellaneous",
 };
 
+export interface SectionSubsection {
+  id: string;
+  /** Display number, e.g. "3.1". Computed at render-time when omitted. */
+  number?: string;
+  title: string;
+  body: TiptapDoc;
+}
+
 export interface Section {
   id: string;
   key: MouSectionKey;
   title: string;
   body: TiptapDoc;
   customized?: boolean;
+  /** Optional structured subsections, e.g. 3.1 / 3.2 / 3.3 under Scope of Work. */
+  subsections?: SectionSubsection[];
+  /** Optional structured facility coverage editor (used on §3 Scope of Work). */
+  coverage?: FacilityCoverage;
 }
 
 // ---------- Addendum blocks ----------
