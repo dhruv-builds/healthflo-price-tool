@@ -8,6 +8,33 @@ Every major entry **must** include a `Decisions` section explaining *why* the ch
 
 ---
 
+## [2026-04-27] Workflow module — Phase 5 (Pricing linking prompt + Seed Review)
+
+### Added
+- **Pricing first-save linking prompt** (`PricingLinkPrompt.tsx`) shown after a brand-new pricing client is created in the Pricing module. Three actions:
+  - **Link to Existing Account** — searchable list of CRM accounts (filtered to those without an existing link, plus the current one).
+  - **Create New Account** — opens the existing `AccountForm` pre-filled with the client's name; on save, the new account is auto-linked to the pricing client.
+  - **Skip for Now** — dismiss; remembered per-session via local component state so the user isn't re-prompted.
+- **Seed Review** view added as a fifth tab in Workflow Home (`/crm/workflows`). Lists every workflow record where `seed_confidence` is set, with **Confirm / Edit / Needs Review** actions and inline preview of seeded next action, blocker, and seed notes.
+- New hook `useWorkflowSeed` (`useUpdateSeedConfidence`).
+- `AccountForm` gained additive optional props `defaultName` and `onCreated(account)` to support the prefilled-create-and-link flow without breaking existing callers.
+
+### Decisions
+- **Trigger only on brand-new client creation**, not on every save. The "first save" of a pricing client is unambiguous because Pricing creates client + first version atomically inside `handleNewClient`. This avoids the prompt re-firing on routine saves.
+- **Per-session skip state** (Set of skipped client IDs in component state) is intentionally non-persistent. If a user reopens the app the prompt may re-appear for the same client, which is acceptable for an MVP "strong nudge" pattern. We can persist this later if it becomes annoying.
+- **No new mutation for create-and-link.** We reuse `useCreateAccount` (via `AccountForm`) and the existing `useUpdateAccount` to set `linked_client_id`. Keeps the surface area additive.
+- **No automated seed importer in this phase.** No user-provided notes/screenshots were attached, so we did not invent seed data. The schema (`seed_confidence`, `seed_notes`) and the **Seed Review** UI are in place; when notes are provided the import will be executed via a one-off SQL/data tool that populates `workflow_records` with `seed_confidence = 'inferred'` or `'needs_review'`. This keeps the rule "do not invent unsupported facts."
+- **Seed Review reuses existing AccountDetail "Edit"** rather than introducing a separate edit modal — single source of truth for editing workflow data.
+
+### Changed
+- `ClientLibrary` now opens `PricingLinkPrompt` on the success of `createClient`.
+- Workflow Home's view tabs now include **Seed Review**; stage filter is hidden in this view.
+
+### Docs
+- Updated `docs/UX_FLOWS.md` (Pricing linking flow, Seed Review flow) and `docs/TECH_DEBT.md` (seed importer pending; per-session skip noted).
+
+---
+
 ## [2026-04-27] Workflow module (MVP)
 
 ### Added
