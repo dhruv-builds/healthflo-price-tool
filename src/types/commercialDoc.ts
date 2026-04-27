@@ -48,7 +48,7 @@ export const tiptapFromText = (text: string): TiptapDoc => ({
 });
 
 // ---------- Cover page (MoU) ----------
-export type CoverVariant = "two_party_centered" | "two_party_left";
+export type CoverVariant = "two_party_centered" | "two_party_left" | "branded_split";
 export type CoverSpacing = "compact" | "normal" | "spacious";
 
 export interface PartyBlock {
@@ -67,6 +67,21 @@ export interface CoverPage {
   clientParty: PartyBlock;
   divider: boolean;
   spacing: CoverSpacing;
+  /** Place where the document is being executed (e.g., "Dehradun, Uttarakhand, India"). */
+  executionLocation?: string;
+}
+
+// ---------- Facility coverage (Scope of Work · 3.2) ----------
+export interface FacilityCoverageRow {
+  id: string;
+  label: string;
+  count?: number;
+  description?: string;
+}
+export interface FacilityCoverage {
+  totalCount?: number;
+  rows: FacilityCoverageRow[];
+  notes?: TiptapDoc;
 }
 
 // ---------- MoU body sections ----------
