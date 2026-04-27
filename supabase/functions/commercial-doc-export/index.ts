@@ -840,13 +840,15 @@ function pdfTable(headers: string[], rows: string[][]): any {
 }
 
 function renderCoverPdf(cover: any, meta: any): any[] {
+  const variant = cover?.variant ?? "two_party_centered";
+  const align = variant === "two_party_left" ? "left" : "center";
   const out: any[] = [
     { text: "", margin: [0, 80, 0, 0] },
     {
       text: cover?.title ?? meta?.title ?? "",
       fontSize: 28,
       bold: true,
-      alignment: "center",
+      alignment: align,
       margin: [0, 0, 0, 8],
     },
   ];
@@ -854,7 +856,7 @@ function renderCoverPdf(cover: any, meta: any): any[] {
     out.push({
       text: cover?.subtitle ?? meta?.subtitle ?? "",
       italics: true,
-      alignment: "center",
+      alignment: align,
       fontSize: 14,
       margin: [0, 0, 0, 24],
     });
@@ -865,19 +867,46 @@ function renderCoverPdf(cover: any, meta: any): any[] {
       margin: [0, 0, 0, 24],
     });
   }
-  const party = (label: string, p: any) => [
-    { text: label, bold: true, alignment: "center", margin: [0, 8, 0, 2] },
-    { text: p?.legalName ?? "", alignment: "center", fontSize: 14 },
-    p?.address ? { text: p.address, alignment: "center", fontSize: 10 } : null,
-  ].filter(Boolean);
-  out.push(...party("VENDOR", cover?.vendorParty));
-  out.push({ text: "AND", bold: true, alignment: "center", margin: [0, 12, 0, 12] });
-  out.push(...party("CLIENT", cover?.clientParty));
+  const partyStack = (label: string, p: any): any => ({
+    stack: [
+      { text: label, bold: true, alignment: "center", margin: [0, 8, 0, 2] },
+      { text: p?.legalName ?? "", alignment: "center", fontSize: 14, bold: true },
+      p?.tagline ? { text: p.tagline, alignment: "center", fontSize: 10, italics: true } : null,
+      p?.address ? { text: p.address, alignment: "center", fontSize: 10 } : null,
+    ].filter(Boolean),
+  });
+
+  if (variant === "branded_split") {
+    out.push({
+      columns: [partyStack("VENDOR", cover?.vendorParty), partyStack("CLIENT", cover?.clientParty)],
+      columnGap: 24,
+      margin: [0, 16, 0, 0],
+    });
+  } else {
+    const party = (label: string, p: any) => [
+      { text: label, bold: true, alignment: "center", margin: [0, 8, 0, 2] },
+      { text: p?.legalName ?? "", alignment: "center", fontSize: 14, bold: true },
+      p?.tagline ? { text: p.tagline, alignment: "center", fontSize: 10, italics: true } : null,
+      p?.address ? { text: p.address, alignment: "center", fontSize: 10 } : null,
+    ].filter(Boolean);
+    out.push(...party("VENDOR", cover?.vendorParty));
+    out.push({ text: "AND", bold: true, alignment: "center", margin: [0, 12, 0, 12] });
+    out.push(...party("CLIENT", cover?.clientParty));
+  }
+
+  if (cover?.executionLocation) {
+    out.push({
+      text: `Executed at: ${cover.executionLocation}`,
+      alignment: "center",
+      italics: true,
+      margin: [0, 28, 0, 0],
+    });
+  }
   if (meta?.effectiveDate) {
     out.push({
       text: `Effective Date: ${meta.effectiveDate}`,
       alignment: "center",
-      margin: [0, 32, 0, 0],
+      margin: [0, 8, 0, 0],
     });
   }
   out.push({ text: "", pageBreak: "after" });
@@ -887,8 +916,46 @@ function renderCoverPdf(cover: any, meta: any): any[] {
 function renderSectionsPdf(sections: any[]): any[] {
   const out: any[] = [];
   sections.forEach((s, i) => {
-    out.push({ text: `${i + 1}. ${s.title}`, fontSize: 16, bold: true, margin: [0, 12, 0, 8] });
+    const num = i + 1;
+    out.push({ text: `${num}. ${s.title}`, fontSize: 16, bold: true, margin: [0, 12, 0, 8] });
     out.push(...tiptapToPdfText(s.body));
+
+    if (s.coverage) {
+      const cov = s.coverage;
+      if (cov.totalCount != null) {
+        out.push({
+          text: [
+            { text: "Total facilities covered: ", bold: true },
+            { text: String(cov.totalCount) },
+          ],
+          margin: [0, 4, 0, 4],
+        });
+      }
+      if (cov.rows?.length) {
+        out.push(
+          pdfTable(
+            ["Facility Type", "Count", "Notes"],
+            cov.rows.map((r: any) => [
+              r.label ?? "",
+              r.count != null ? String(r.count) : "—",
+              r.description ?? "",
+            ])
+          )
+        );
+      }
+      if (cov.notes) out.push(...tiptapToPdfText(cov.notes));
+    }
+
+    s.subsections?.forEach((ss: any, j: number) => {
+      const number = ss.number ?? `${num}.${j + 1}`;
+      out.push({
+        text: `${number} ${ss.title}`,
+        fontSize: 13,
+        bold: true,
+        margin: [0, 8, 0, 4],
+      });
+      out.push(...tiptapToPdfText(ss.body));
+    });
   });
   return out;
 }
