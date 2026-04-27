@@ -65,3 +65,27 @@ Clicking "Open in Pricing" from a CRM account navigates to `/?clientId={uuid}`. 
 
 - Mutations (create/update/delete) → `sonner` toast on success and error.
 - Destructive actions → confirmation dialog before mutation.
+
+---
+
+## Workflow flows (added 2026-04-27)
+
+### Initialize workflow
+1. Open a CRM account → **Workflow** tab.
+2. If no workflow exists, click **Initialize Workflow** → creates a `workflow_records` row at stage `Lead`, owned by current user, optionally pre-linked to the account's `linked_client_id`. Default checklist seeded.
+
+### Operate on a workflow
+- **Change Stage** — opens `WorkflowStageModal` with target stage + optional reason. Soft warning if required current-stage checklist items are incomplete. On confirm: writes `workflow_stage_history`, updates `stage` and `stage_entered_at`.
+- **Next Action** — inline edit (title + datetime).
+- **Blocker** — inline edit (type + reason; reason required by DB trigger). Clear via header button.
+- **Pricing Reference** — pick a version from the linked pricing client; opens Pricing via `/?clientId=<uuid>`.
+- **Checklist** — toggle items; `*` marks required.
+- **Create Task** — opens existing `TaskForm` scoped to the account (CRM Tasks remain the system of record for assigned work).
+
+### Workflow Home
+- Views: **All**, **My Queue** (owner = current user), **Needs Attention**, **Board** (Kanban by stage).
+- Stage filter on non-board views.
+- Summary cards: Active Workflows, Needs Attention, Blocked, Ready to Move.
+
+### Needs Attention rules (deterministic)
+A workflow is flagged when any of: next action overdue, no next action set, `is_blocked = true`, stage stale > 14 days, or stage requires pricing reference (`Pricing` / `Negotiation` / `Pricing Agreement`) and `reference_version_id` is null.

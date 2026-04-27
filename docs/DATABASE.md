@@ -101,3 +101,27 @@ Not currently enabled on any table. To enable, the table must be added to the `s
 ```sql
 ALTER PUBLICATION supabase_realtime ADD TABLE public.<table>;
 ```
+
+---
+
+## Workflow tables (added 2026-04-27)
+
+All in `public.`, RLS enabled, mirroring the CRM pattern (read/insert/update gated by `is_approved_user(auth.uid())`, delete restricted to creator or admin where applicable).
+
+### Enums
+- `workflow_stage` — `Lead`, `Discovery`, `Pricing`, `Negotiation`, `MoU`, `Pricing Agreement`, `Onboarding`, `Live`, `Collections`, `Lost`
+- `workflow_blocker_type` — `Awaiting Customer`, `Awaiting Internal`, `Legal`, `Pricing`, `Technical`, `Other`
+- `workflow_suggestion_status` — `pending`, `accepted`, `dismissed`
+- `workflow_seed_confidence` — `confirmed`, `inferred`, `needs_review`
+
+### Tables
+- **`workflow_records`** — one row per CRM account (UNIQUE on `account_id`). Fields: `stage`, `owner_id`, `next_action_title`, `next_action_due_at`, `is_blocked`, `blocker_type`, `blocker_reason`, `linked_client_id`, `reference_version_id`, `stage_entered_at`, `last_reviewed_at`, `seed_confidence`, `seed_notes`, `created_by`, `updated_by`, timestamps.
+- **`workflow_collaborators`** — `(workflow_id, user_id)` unique; `role` text.
+- **`workflow_checklist_items`** — `(workflow_id, stage, item_key)` unique; `is_required`, `is_complete`, `completed_at/by`, `evidence_type`, `notes`.
+- **`workflow_stage_history`** — append-only audit (no UPDATE/DELETE policies). `from_stage`, `to_stage`, `changed_by`, `reason`, `source`.
+- **`workflow_stage_suggestions`** — `suggested_stage`, `reason_code`, `reason_text`, `status`, resolution fields.
+
+### Functions / triggers
+- `update_workflow_updated_at()` — bumps `updated_at` on records and checklist items.
+- `validate_workflow_blocker()` — raises if `is_blocked=true` and `blocker_reason` is empty.
+- `seed_default_checklist(_workflow_id uuid)` — security-definer; populates a default per-stage checklist on workflow init.
