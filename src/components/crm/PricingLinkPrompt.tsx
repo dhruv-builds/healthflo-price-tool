@@ -7,8 +7,7 @@ import { useCrmAccounts, useUpdateAccount } from "@/hooks/useCrmAccounts";
 import { useAuth } from "@/contexts/AuthContext";
 import { AccountForm } from "./AccountForm";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import type { CrmAccount } from "@/types/crm";
 
 interface Props {
   open: boolean;
@@ -17,11 +16,10 @@ interface Props {
   clientName: string;
 }
 
-type Mode = "choose" | "link" | "create";
+type Mode = "choose" | "link";
 
 export function PricingLinkPrompt({ open, onOpenChange, clientId, clientName }: Props) {
   const { user } = useAuth();
-  const qc = useQueryClient();
   const { data: accounts = [] } = useCrmAccounts();
   const updateAccount = useUpdateAccount();
 
@@ -29,23 +27,18 @@ export function PricingLinkPrompt({ open, onOpenChange, clientId, clientName }: 
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
 
-  // Hide accounts already linked to a different pricing client
   const linkable = accounts.filter((a) => !a.linked_client_id || a.linked_client_id === clientId);
   const filtered = search
     ? linkable.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
     : linkable;
 
-  const reset = () => {
+  const close = () => {
     setMode("choose");
     setSearch("");
-  };
-
-  const close = () => {
-    reset();
     onOpenChange(false);
   };
 
-  const handleLink = async (accountId: string) => {
+  const linkAccount = async (accountId: string) => {
     await updateAccount.mutateAsync({
       id: accountId,
       linked_client_id: clientId,
@@ -55,23 +48,8 @@ export function PricingLinkPrompt({ open, onOpenChange, clientId, clientName }: 
     close();
   };
 
-  // After AccountForm closes successfully, find the newly created account by name and link it.
-  const handleAfterCreate = async () => {
-    setCreateOpen(false);
-    // Refetch then locate
-    await qc.invalidateQueries({ queryKey: ["crm-accounts"] });
-    const { data, error } = await supabase
-      .from("crm_accounts")
-      .select("*")
-      .eq("name", clientName)
-      .order("created_at", { ascending: false })
-      .limit(1);
-    if (error || !data?.[0]) {
-      toast.error("Account created but could not auto-link. Link from the account page.");
-      close();
-      return;
-    }
-    await handleLink(data[0].id);
+  const onAccountCreated = async (acc: CrmAccount) => {
+    await linkAccount(acc.id);
   };
 
   return (
@@ -121,7 +99,7 @@ export function PricingLinkPrompt({ open, onOpenChange, clientId, clientName }: 
                   filtered.map((a) => (
                     <button
                       key={a.id}
-                      onClick={() => handleLink(a.id)}
+                      onClick={() => linkAccount(a.id)}
                       className="block w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
                     >
                       <div className="font-medium">{a.name}</div>
@@ -140,37 +118,12 @@ export function PricingLinkPrompt({ open, onOpenChange, clientId, clientName }: 
         </DialogContent>
       </Dialog>
 
-      {/* Reuse existing AccountForm; we cannot prefill cleanly without refactoring it,
-          so we instruct the user via the prompt above and detect by name afterwards. */}
-      <AccountFormPrefilled
+      <AccountForm
         open={createOpen}
-        onOpenChange={(v) => {
-          if (!v) handleAfterCreate();
-        }}
+        onOpenChange={setCreateOpen}
         defaultName={clientName}
+        onCreated={onAccountCreated}
       />
     </>
-  );
-}
-
-// Light wrapper that re-uses AccountForm but seeds the name field via a key remount.
-function AccountFormPrefilled({
-  open,
-  onOpenChange,
-  defaultName,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  defaultName: string;
-}) {
-  // We pass account={null} but use a synthetic prefill approach: render AccountForm with a
-  // key bound to the name so its defaultValues pick up. AccountForm reads name from `account?.name`,
-  // so we shape a partial account-like object containing only `name`.
-  return (
-    <AccountForm
-      open={open}
-      onOpenChange={onOpenChange}
-      account={open ? ({ name: defaultName } as any) : null}
-    />
   );
 }
