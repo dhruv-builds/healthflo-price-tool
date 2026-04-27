@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Separator } from "@/components/ui/separator";
 import { Save, Plus, Copy, Trash2, Pencil, FolderOpen, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { PricingLinkPrompt } from "@/components/crm/PricingLinkPrompt";
 
 interface Props {
   inputs: PricingInputs;
@@ -33,6 +34,10 @@ export function ClientLibrary({ inputs, setInputs, activeClientId, activeVersion
 
   const [newName, setNewName] = useState("");
   const [newNotes, setNewNotes] = useState("");
+
+  // Pricing → CRM linking prompt (after first save of a brand-new client)
+  const [linkPrompt, setLinkPrompt] = useState<{ id: string; name: string } | null>(null);
+  const [skippedClientIds, setSkippedClientIds] = useState<Set<string>>(new Set());
 
   const activeClient = clients.find((c) => c.id === activeClientId);
   const activeVersion = versions.find((v) => v.id === activeVersionId);
@@ -76,6 +81,10 @@ export function ClientLibrary({ inputs, setInputs, activeClientId, activeVersion
           setActiveClientId(c.id);
           setNewClientOpen(false);
           setNewName("");
+          // Trigger CRM linking prompt after first-save of a brand-new client
+          if (!skippedClientIds.has(c.id)) {
+            setLinkPrompt({ id: c.id, name: c.name });
+          }
         },
       }
     );
