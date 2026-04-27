@@ -24,6 +24,8 @@ import { TaskForm } from "@/components/crm/TaskForm";
 import { DocumentsSection } from "@/components/crm/DocumentsSection";
 import { DocumentForm } from "@/components/crm/DocumentForm";
 import { PricingLinkSelector } from "@/components/crm/PricingLinkSelector";
+import { WorkflowPanel } from "@/components/crm/WorkflowPanel";
+import { useWorkflowByAccount } from "@/hooks/useWorkflowRecords";
 import { CrmContact } from "@/types/crm";
 
 export default function AccountDetail() {
