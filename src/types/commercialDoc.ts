@@ -334,22 +334,73 @@ export function computeUnresolvedFields(doc: DocumentDoc): UnresolvedField[] {
         label: "Vendor legal name on cover",
         severity: "missing",
       });
-    if (!doc.cover.clientParty?.legalName)
+    if (!doc.cover.vendorParty?.address)
+      out.push({
+        path: "cover.vendorParty.address",
+        label: "Vendor address on cover",
+        severity: "missing",
+      });
+    if (!doc.cover.clientParty?.legalName || isPlaceholder(doc.cover.clientParty.legalName))
       out.push({
         path: "cover.clientParty.legalName",
         label: "Client legal name on cover",
         severity: "missing",
       });
+    if (!doc.cover.clientParty?.address)
+      out.push({
+        path: "cover.clientParty.address",
+        label: "Client address on cover",
+        severity: "missing",
+      });
+    if (!doc.cover.executionLocation)
+      out.push({
+        path: "cover.executionLocation",
+        label: "Execution location (city, state)",
+        severity: "missing",
+      });
   }
   doc.sections?.forEach((s, i) => {
-    const txt = JSON.stringify(s.body);
-    if (txt.length < 30 || isPlaceholder(txt)) {
+    const txt = JSON.stringify(s.body ?? {});
+    const subTxt = JSON.stringify(s.subsections ?? []);
+    const hasContent = txt.length > 30 || subTxt.length > 30 || !!s.coverage;
+    if (!hasContent) {
       out.push({
         path: `sections[${i}]`,
         label: `Section "${s.title}" looks empty`,
         severity: "placeholder",
       });
     }
+    if (isPlaceholder(txt) || isPlaceholder(subTxt)) {
+      out.push({
+        path: `sections[${i}].placeholder`,
+        label: `Section "${s.title}" still has unresolved {{placeholders}}`,
+        severity: "placeholder",
+      });
+    }
+    if (s.coverage) {
+      if (s.coverage.totalCount == null)
+        out.push({
+          path: `sections[${i}].coverage.totalCount`,
+          label: `Facility coverage: total facility count missing`,
+          severity: "missing",
+        });
+      if (!s.coverage.rows || s.coverage.rows.length === 0)
+        out.push({
+          path: `sections[${i}].coverage.rows`,
+          label: `Facility coverage: no facility-type rows added`,
+          severity: "missing",
+        });
+    }
+    s.subsections?.forEach((ss, j) => {
+      const ssTxt = JSON.stringify(ss.body ?? {});
+      if (ssTxt.length < 20) {
+        out.push({
+          path: `sections[${i}].subsections[${j}]`,
+          label: `Subsection "${ss.title}" looks empty`,
+          severity: "placeholder",
+        });
+      }
+    });
   });
   doc.blocks?.forEach((b, i) => {
     if (b.kind === "pricing_table") {
@@ -376,13 +427,25 @@ export function computeUnresolvedFields(doc: DocumentDoc): UnresolvedField[] {
     if (!doc.signature.partyA?.signatoryName)
       out.push({
         path: "signature.partyA.signatoryName",
-        label: "Party A signatory missing",
+        label: "First-party signatory name missing",
+        severity: "missing",
+      });
+    if (!doc.signature.partyA?.designation)
+      out.push({
+        path: "signature.partyA.designation",
+        label: "First-party signatory designation missing",
         severity: "missing",
       });
     if (!doc.signature.partyB?.signatoryName)
       out.push({
         path: "signature.partyB.signatoryName",
-        label: "Party B signatory missing",
+        label: "Second-party signatory name missing",
+        severity: "missing",
+      });
+    if (!doc.signature.partyB?.designation)
+      out.push({
+        path: "signature.partyB.designation",
+        label: "Second-party signatory designation missing",
         severity: "missing",
       });
   }
