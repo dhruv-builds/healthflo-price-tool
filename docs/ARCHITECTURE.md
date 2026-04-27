@@ -100,3 +100,17 @@ Defined in `src/App.tsx` using `react-router-dom` v6. All routes are wrapped by 
 | `src/integrations/supabase/` | Auto-generated Supabase client + types (do not edit) |
 | `supabase/` | Migrations, `config.toml`, edge function source |
 | `docs/` | This documentation pack |
+
+---
+
+## Workflow module (added 2026-04-27)
+
+Operational layer over CRM accounts. Lives entirely under `/crm/workflows` and inside the **Workflow** tab of `AccountDetail`. Does not modify Pricing or CRM Tasks.
+
+- **Route**: `/crm/workflows` (registered in `App.tsx` under the CRM layout).
+- **Page**: `src/pages/crm/WorkflowPage.tsx` — views: All, My Queue, Needs Attention, Board.
+- **Embedded**: `src/components/crm/WorkflowPanel.tsx` rendered inside `AccountDetail` tab "Workflow".
+- **Hooks**: `useWorkflowRecords`, `useWorkflowMutations` (init / update / change stage / set blocker), `useWorkflowChecklist`.
+- **Types**: `src/types/workflow.ts` — `WORKFLOW_STAGES`, `WORKFLOW_BLOCKER_TYPES`, deterministic `getAttentionReasons(workflow)`.
+- **Stage progression is manual.** No auto-advance. `WorkflowStageModal` shows incomplete required checklist items as a soft warning.
+- **Pricing handoff** still uses `/?clientId=<uuid>` from the panel's "Open in Pricing" button.

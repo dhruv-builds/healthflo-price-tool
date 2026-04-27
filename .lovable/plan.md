@@ -1,97 +1,162 @@
-## Goal
+# Workflow Module — Additive Build Plan
 
-Persist the HealthFlo documentation pack inside the repo so it stays in sync with the code, and add a changelog that records every major update with the decisions behind it.
+A new operational layer over existing CRM accounts. Workflow stage is tracked **separately** from the existing `crm_accounts.status`. CRM Tasks remain unchanged. Pricing is untouched except for one small first-save linking prompt.
 
-## Recommended Approach
+---
 
-Use plain Markdown files at the repo root. Markdown is the standard for in-repo docs, renders nicely on GitHub/Lovable, is easy to diff in PRs, and requires zero tooling. We'll split into a few focused files instead of one giant document so updates stay scoped and changelog entries can reference specific sections.
+## What gets built
 
-## Files to Create
+### New route & nav
+- `/crm/workflows` — Workflow Home (List · Board · My Queue · Needs Attention)
+- New nav item **"Workflow"** added to `CrmLayout.tsx` (icon: `Workflow` from lucide), placed between Tasks and Reports.
+- New section/tab **"Workflow"** embedded in `AccountDetail.tsx` (added as a new Tabs tab, default to it when present).
 
-```text
-/docs
-  ├── ARCHITECTURE.md      # System overview, modules, routing, integrations
-  ├── DATABASE.md          # Tables, enums, RLS, storage buckets
-  ├── AUTH.md              # Roles, approval gating, permissions matrix
-  ├── UX_FLOWS.md          # Pricing flow, CRM flows, presentation mode
-  ├── TECH_DEBT.md         # Known gaps, risks, future cleanup
-  └── README.md            # Index/table of contents linking the above
-/CHANGELOG.md              # Chronological log of major updates
-```
+### New pages / components
+| File | Purpose |
+|---|---|
+| `pages/crm/WorkflowPage.tsx` | Workflow Home with view tabs + filter bar |
+| `components/crm/WorkflowList.tsx` | Dense table view (account, stage, owner, next action, due, blocker, attention) |
+| `components/crm/WorkflowBoard.tsx` | Kanban columns by stage |
+| `components/crm/WorkflowSummaryCards.tsx` | Active / Needs Attention / Blocked / Ready to Move counts |
+| `components/crm/WorkflowFilters.tsx` | Owner, stage, blocked, attention, linked-pricing, account status |
+| `components/crm/WorkflowPanel.tsx` | Embedded section in AccountDetail (header, owner, next action, blocker, pricing ref, suggestions) |
+| `components/crm/WorkflowChecklist.tsx` | Stage-grouped checklist with toggle + required indicators |
+| `components/crm/WorkflowStageModal.tsx` | Manual stage change with reason + incomplete-checklist warning |
+| `components/crm/WorkflowPricingReference.tsx` | Linked client + reference version selector |
+| `components/crm/WorkflowCollaborators.tsx` | Add/remove lightweight collaborators |
+| `components/crm/WorkflowSeedReview.tsx` | Lightweight review surface for seeded records (dialog from Workflow Home) |
+| `components/crm/WorkflowInitButton.tsx` | "Initialize Workflow" empty-state CTA in AccountDetail |
+| `components/crm/PricingLinkPrompt.tsx` | Modal triggered after first version save (Pricing) |
 
-Root-level `README.md` gets a short "Documentation" section pointing to `/docs` and `/CHANGELOG.md`.
+### New hooks / types
+| File | Purpose |
+|---|---|
+| `types/workflow.ts` | Enums (`WORKFLOW_STAGES`, `BLOCKER_TYPES`, `SEED_CONFIDENCE`), row + insert/update types |
+| `hooks/useWorkflowRecords.ts` | List/detail queries with filters; query key `["workflow-records", filters]` |
+| `hooks/useWorkflowMutations.ts` | Create/init, update, change stage (writes history), set blocker, set next action |
+| `hooks/useWorkflowChecklist.ts` | Read + toggle checklist items; seeds defaults on init |
+| `hooks/useWorkflowSuggestions.ts` | Reads suggestions; resolve (accept/dismiss) |
+| `hooks/useWorkflowCollaborators.ts` | Add/remove collaborators |
 
-### Why this structure
-- `/docs` folder is the convention readers expect.
-- Splitting by concern (architecture vs. DB vs. auth) keeps files short and makes targeted updates trivial.
-- `CHANGELOG.md` at root follows the widely-recognized [Keep a Changelog](https://keepachangelog.com) convention, so any future contributor (human or AI) immediately knows where to look.
+---
 
-## CHANGELOG Format
+## Database (new tables)
 
-Each entry is dated and grouped by type. Every major entry includes a "Decisions" sub-bullet capturing the *why*, not just the *what*.
+All under `public.`, RLS enabled, follow CRM pattern: read/insert/update for `is_approved_user(auth.uid())`, delete for creator-or-admin.
 
-```markdown
-## [2026-04-27] HealthFlo Rebrand + Interactive Status Badges
+**New enums**
+- `workflow_stage`: `Lead`, `Discovery`, `Pricing`, `Negotiation`, `MoU`, `Pricing Agreement`, `Onboarding`, `Live`, `Collections`, `Lost`
+- `workflow_blocker_type`: `Awaiting Customer`, `Awaiting Internal`, `Legal`, `Pricing`, `Technical`, `Other`
+- `workflow_suggestion_status`: `pending`, `accepted`, `dismissed`
+- `workflow_seed_confidence`: `confirmed`, `inferred`, `needs_review`
 
-### Changed
-- Renamed all UI instances of "NileFlow" → "HealthFlo" (GlobalHeader, Auth page).
+**`workflow_records`** (one active per account)
+- `id uuid pk`, `account_id uuid not null unique`, `stage workflow_stage not null default 'Lead'`
+- `owner_id uuid`, `next_action_title text`, `next_action_due_at timestamptz`
+- `is_blocked boolean not null default false`, `blocker_type workflow_blocker_type`, `blocker_reason text`
+- `linked_client_id uuid`, `reference_version_id uuid`
+- `stage_entered_at timestamptz default now()`, `last_reviewed_at timestamptz`
+- `seed_confidence workflow_seed_confidence`, `seed_notes text`
+- `created_by uuid not null`, `updated_by uuid`, `created_at`, `updated_at`
+- **Validation trigger** (not CHECK): if `is_blocked=true` then `blocker_reason` required.
+- Unique constraint on `account_id` enforces "one active workflow per account".
 
-### Added
-- `src/components/crm/StatusBadgeDropdown.tsx` — inline status editing
-  in Accounts table and Account Detail header.
+**`workflow_collaborators`**
+- `id`, `workflow_id`, `user_id`, `role text default 'collaborator'`, `created_at`
+- Unique `(workflow_id, user_id)`.
 
-### Decisions
-- Kept badge visual styling identical; added only a caret to signal
-  interactivity, avoiding a heavier redesign.
-- Used existing `useUpdateAccount` mutation rather than a new endpoint
-  to preserve cache invalidation behavior.
-```
+**`workflow_checklist_items`**
+- `id`, `workflow_id`, `stage workflow_stage`, `item_key text`, `label text`
+- `is_required boolean default false`, `is_complete boolean default false`
+- `completed_at`, `completed_by`, `evidence_type text`, `notes text`
+- `created_at`, `updated_at`. Unique `(workflow_id, stage, item_key)`.
 
-Categories used: `Added`, `Changed`, `Fixed`, `Removed`, `Security`, `Decisions`.
+**`workflow_stage_history`**
+- `id`, `workflow_id`, `from_stage`, `to_stage`, `changed_by`, `changed_at default now()`, `reason text`, `source text` (`manual` | `suggestion_accepted` | `seed`)
 
-## Initial Content
+**`workflow_stage_suggestions`**
+- `id`, `workflow_id`, `suggested_stage`, `reason_code text`, `reason_text text`, `status workflow_suggestion_status default 'pending'`, `created_at`, `resolved_at`, `resolved_by`
 
-- `/docs/*` files will be populated from the documentation pack already produced (the same content delivered in the DOCX), reformatted as Markdown with proper headings, tables, and code fences.
-- `CHANGELOG.md` will be seeded with a back-dated entry summarizing the recent work that's already shipped:
-  - HealthFlo rebrand
-  - Interactive status badge dropdown
-  - Dialog scrollability fix (`max-h-[90vh] overflow-y-auto`)
-  - CRM Reports (stale account detection, pipeline view)
-  - Presentation Mode (admin-only)
-  - Documentation pack creation
+**Triggers / functions**
+- `update_workflow_updated_at()` — bumps `updated_at` on `workflow_records`.
+- `validate_workflow_blocker()` — enforces blocker_reason when blocked.
+- `seed_default_checklist(workflow_id)` — security definer; inserts default items per stage on workflow init.
 
-## Maintenance Rule (Going Forward)
+No FKs added across CRM tables (consistent with current codebase pattern); references validated in code.
 
-I'll add a short "Documentation Maintenance" note to the root `README.md` and to `/docs/README.md` stating:
+---
 
-> When making a **major update** (new module, schema change, auth/role change, new integration, or notable UX change), update the relevant `/docs/*.md` file **and** add a `CHANGELOG.md` entry including a **Decisions** section.
+## Stage logic
 
-This gives future AI sessions (and humans) an explicit, discoverable rule. I will follow it on every subsequent change in this project.
+- **Manual confirmation only.** No auto-advance.
+- `WorkflowStageModal` shows incomplete required items as a soft warning; user can still confirm.
+- On confirm: update `workflow_records.stage` + `stage_entered_at`, insert `workflow_stage_history` row.
+- **Suggestions** (computed client-side from existing data, written to `workflow_stage_suggestions` only when generated by an explicit "refresh suggestions" action — keeps it deterministic and visible):
+  - `Pricing` suggested when account has a linked pricing client but stage < Pricing.
+  - `MoU` suggested when a document of type matching `mou` keyword exists.
+  - `Onboarding` suggested when a Won opportunity exists.
+  - Each suggestion shown as a card; user accepts (opens stage modal pre-filled) or dismisses.
 
-### What counts as "major" (and gets a changelog entry)
-- New page, route, or top-level feature
-- Database schema change (new table, column, enum, RLS policy)
-- Auth/permissions change
-- New external integration or secret
-- Branding/naming changes that affect users
-- Breaking changes to shared components or hooks
+## Needs Attention rules (deterministic, in `useWorkflowRecords` selector)
+A workflow is flagged when any of:
+- `next_action_due_at < now()`
+- `next_action_title` is null
+- `is_blocked = true`
+- `stage_entered_at` older than **14 days** (config constant)
+- stage ∈ {`Pricing`, `Negotiation`, `Pricing Agreement`} and `reference_version_id` is null
 
-Trivial style tweaks, copy fixes, and bug fixes scoped to one component do **not** require a changelog entry (but can be grouped under a `Fixed` bullet if shipped alongside major work).
+## Default checklists per stage (seeded on init)
+Compact, editable later. E.g.:
+- **Lead**: Identify decision maker (req), Initial outreach logged
+- **Discovery**: Discovery call completed (req), Pain points documented
+- **Pricing**: Pricing client linked (req), Reference version selected (req)
+- **Negotiation**: Commercials shared (req), Internal approval
+- **MoU**: MoU drafted (req), MoU signed (req)
+- **Pricing Agreement**: Agreement signed (req)
+- **Onboarding**: Kickoff scheduled (req), Access provisioned
+- **Live**: Go-live confirmed (req)
+- **Collections**: First invoice sent (req), First payment received
 
-## Out of Scope
+---
 
-- No automated changelog tooling (e.g. changesets, semantic-release) — overkill for current team size.
-- No version numbers yet; entries are dated. We can add semver later if the app is ever published as a package.
+## Pricing first-save linking prompt
 
-## Summary of Changes
+In `src/components/pricing/PricingToolbar.tsx` (or wherever the first version save lives — verify during build), after a successful save where the client had **zero prior versions**, open `PricingLinkPrompt`:
+- "Link to Existing Account" → searchable account picker → updates `crm_accounts.linked_client_id`.
+- "Create New Account" → opens existing `AccountForm` pre-filled with client name.
+- "Skip for Now" → dismiss; remember per-session via component state (no new persistence).
 
-| File | Action |
-|------|--------|
-| `docs/README.md` | New — index |
-| `docs/ARCHITECTURE.md` | New |
-| `docs/DATABASE.md` | New |
-| `docs/AUTH.md` | New |
-| `docs/UX_FLOWS.md` | New |
-| `docs/TECH_DEBT.md` | New |
-| `CHANGELOG.md` | New — seeded with recent history |
-| `README.md` | Edited — add Documentation + Maintenance section |
+Existing `/?clientId=<uuid>` handoff stays unchanged.
+
+---
+
+## AccountDetail integration
+
+- Add new tab **"Workflow"** (becomes default when a workflow exists for the account).
+- If no workflow: show empty state with **"Initialize Workflow"** CTA → creates `workflow_records` row + seeds default checklist.
+- WorkflowPanel composes: header (stage badge + Change Stage), Next Action card, Blocker card, Pricing Reference, Checklist, Collaborators, Suggestions, Recent stage history (last 5).
+
+---
+
+## Phasing
+
+1. **Shell + types**: route, nav, page skeleton, `types/workflow.ts`, placeholder hooks.
+2. **DB migration**: enums, 5 tables, RLS, validation trigger, `seed_default_checklist` function.
+3. **Hooks + Workflow Home**: list/board/queue/attention with filters and summary cards.
+4. **AccountDetail Workflow tab**: panel, checklist, stage modal, blocker/next action UI.
+5. **Pricing reference + first-save prompt + Create Task from workflow** (reuses existing `TaskForm`).
+6. **Seed utility + review surface**: import script driven by user-provided notes (run as a one-off; review dialog lets users confirm / edit / mark needs-review). Seeded rows get `seed_confidence` and `seed_notes` populated.
+7. **Polish**: empty/loading/error states, a11y pass, query invalidation review.
+
+---
+
+## Out of scope (explicit)
+- Multiple workflows per account
+- Auto-advance / AI suggestions
+- Comments, notifications, integrations
+- Refactors to Pricing or CRM Tasks
+- New roles or auth changes
+- Replacing `sonner` toasts (existing dual-toast tech debt left as-is)
+
+## Docs/changelog
+Per the maintenance rule, will update `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/UX_FLOWS.md`, and append a `CHANGELOG.md` entry covering the new module, schema, and the Pricing linking prompt decision.

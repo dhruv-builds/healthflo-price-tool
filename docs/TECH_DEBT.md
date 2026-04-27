@@ -38,3 +38,14 @@ Items here are deliberate trade-offs or known gaps. Update this file when items 
 ## Documentation
 
 - This `/docs` pack and `CHANGELOG.md` must be kept current. See `/docs/README.md` for the maintenance rule.
+
+---
+
+## Workflow module — known gaps (2026-04-27)
+
+- **Pricing first-save linking prompt** not yet wired. Plan: trigger after the first version save for a brand-new pricing client; offer Link / Create / Skip.
+- **Seed utility & seed-review surface** not yet built. `workflow_records.seed_confidence` and `seed_notes` columns exist for when this lands.
+- **Stage suggestions UI** not exposed yet. Table (`workflow_stage_suggestions`) and enum exist; no generator or accept/dismiss UI.
+- **Workflow collaborators UI** not built. Table exists; add/remove flow pending.
+- **No FK between `workflow_records.linked_client_id` and `clients.id`** (consistent with the existing CRM no-FK convention). Validate in code if this becomes a source of bugs.
+- **No analytics events** wired for workflow_* actions yet.

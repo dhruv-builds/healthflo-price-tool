@@ -24,6 +24,8 @@ import { TaskForm } from "@/components/crm/TaskForm";
 import { DocumentsSection } from "@/components/crm/DocumentsSection";
 import { DocumentForm } from "@/components/crm/DocumentForm";
 import { PricingLinkSelector } from "@/components/crm/PricingLinkSelector";
+import { WorkflowPanel } from "@/components/crm/WorkflowPanel";
+import { useWorkflowByAccount } from "@/hooks/useWorkflowRecords";
 import { CrmContact } from "@/types/crm";
 
 export default function AccountDetail() {
@@ -37,6 +39,7 @@ export default function AccountDetail() {
   const { data: tasks = [], isLoading: tasksLoading } = useCrmTasks({ account_id: id ?? undefined });
   const { data: documents = [], isLoading: docsLoading } = useCrmDocuments(id ?? null);
   const { data: clients = [] } = useClients();
+  const { data: workflow } = useWorkflowByAccount(id ?? null);
   const updateAccount = useUpdateAccount();
 
   const [showEditAccount, setShowEditAccount] = useState(false);
@@ -108,14 +111,19 @@ export default function AccountDetail() {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="timeline">
+      <Tabs defaultValue={workflow ? "workflow" : "timeline"}>
         <TabsList>
+          <TabsTrigger value="workflow">Workflow{workflow ? "" : " (off)"}</TabsTrigger>
           <TabsTrigger value="timeline">Timeline ({activities.length})</TabsTrigger>
           <TabsTrigger value="contacts">Contacts ({contacts.length})</TabsTrigger>
           <TabsTrigger value="opportunity">Opportunity ({opportunities.length})</TabsTrigger>
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="workflow" className="mt-4">
+          <WorkflowPanel account={account} contacts={contacts} opportunities={opportunities} />
+        </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">
           <ActivityTimeline activities={activities} contacts={contacts} opportunities={opportunities} isLoading={activitiesLoading} />

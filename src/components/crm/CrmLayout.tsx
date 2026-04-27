@@ -1,8 +1,9 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Building2, ListTodo, BarChart3 } from "lucide-react";
+import { Building2, ListTodo, BarChart3, Workflow } from "lucide-react";
 
 const navItems = [
   { to: "/crm", label: "Accounts", icon: Building2, end: true },
+  { to: "/crm/workflows", label: "Workflow", icon: Workflow },
   { to: "/crm/tasks", label: "Tasks", icon: ListTodo },
   { to: "/crm/reports", label: "Reports", icon: BarChart3 },
 ];
