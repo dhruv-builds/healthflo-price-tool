@@ -1,58 +1,97 @@
+## Goal
 
+Persist the HealthFlo documentation pack inside the repo so it stays in sync with the code, and add a changelog that records every major update with the decisions behind it.
 
-# CRM Refinements: Branding + Interactive Status Badges
+## Recommended Approach
 
-## 1. Global Branding Update
+Use plain Markdown files at the repo root. Markdown is the standard for in-repo docs, renders nicely on GitHub/Lovable, is easy to diff in PRs, and requires zero tooling. We'll split into a few focused files instead of one giant document so updates stay scoped and changelog entries can reference specific sections.
 
-Replace "NileFlow" → "HealthFlo" in two files:
-- **`src/components/GlobalHeader.tsx`** line 16: `NileFlow` → `HealthFlo`, line 17: `Enterprise Suite` → `Enterprise Suite` (unchanged)
-- **`src/pages/Auth.tsx`** line 62: `NileFlow` → `HealthFlo`, line 63: `Enterprise CRM Tool` → `Enterprise Pricing & CRM Tool`
-
-`TopBar.tsx`, `exportExcel.ts`, and `README.md` already say "HealthFlo" — no changes needed.
-
-## 2. Interactive Status Badge Component
-
-Create **`src/components/crm/StatusBadgeDropdown.tsx`** — a shared component used in both the Accounts table and Account Detail header.
+## Files to Create
 
 ```text
-┌──────────┐
-│ Active ▾ │  ← looks like current badge with tiny caret
-└──────────┘
-     ↓ click
-┌──────────────┐
-│ ○ Active     │
-│ ○ Dormant    │
-│ ○ Won Customer│
-│ ○ Lost       │
-│ ○ Archived   │
-└──────────────┘
+/docs
+  ├── ARCHITECTURE.md      # System overview, modules, routing, integrations
+  ├── DATABASE.md          # Tables, enums, RLS, storage buckets
+  ├── AUTH.md              # Roles, approval gating, permissions matrix
+  ├── UX_FLOWS.md          # Pricing flow, CRM flows, presentation mode
+  ├── TECH_DEBT.md         # Known gaps, risks, future cleanup
+  └── README.md            # Index/table of contents linking the above
+/CHANGELOG.md              # Chronological log of major updates
 ```
 
-**Props:** `accountId: string`, `currentStatus: CrmAccountStatus`, `onStatusChange?: () => void`
+Root-level `README.md` gets a short "Documentation" section pointing to `/docs` and `/CHANGELOG.md`.
 
-**Behavior:**
-- Uses shadcn `DropdownMenu` with `DropdownMenuRadioGroup`
-- Trigger renders styled like current `Badge` with matching color + a `ChevronDown` icon
-- On select, calls `useUpdateAccount().mutateAsync({ id, status, updated_by })` 
-- Shows toast on error; query cache invalidation already handled by the existing mutation hook
-- Stops event propagation on click (important for table rows which navigate on click)
+### Why this structure
+- `/docs` folder is the convention readers expect.
+- Splitting by concern (architecture vs. DB vs. auth) keeps files short and makes targeted updates trivial.
+- `CHANGELOG.md` at root follows the widely-recognized [Keep a Changelog](https://keepachangelog.com) convention, so any future contributor (human or AI) immediately knows where to look.
 
-## 3. Accounts Table Update
+## CHANGELOG Format
 
-**`src/components/crm/AccountsTable.tsx`** — replace the static status `<Badge>` in the table row with `<StatusBadgeDropdown accountId={a.id} currentStatus={a.status} />`.
+Each entry is dated and grouped by type. Every major entry includes a "Decisions" sub-bullet capturing the *why*, not just the *what*.
 
-## 4. Account Detail Header Update
+```markdown
+## [2026-04-27] HealthFlo Rebrand + Interactive Status Badges
 
-**`src/pages/crm/AccountDetail.tsx`** line 76 — replace `<Badge variant="outline">{account.status}</Badge>` with `<StatusBadgeDropdown accountId={account.id} currentStatus={account.status} />`.
+### Changed
+- Renamed all UI instances of "NileFlow" → "HealthFlo" (GlobalHeader, Auth page).
 
-## Files Changed
-| File | Change |
+### Added
+- `src/components/crm/StatusBadgeDropdown.tsx` — inline status editing
+  in Accounts table and Account Detail header.
+
+### Decisions
+- Kept badge visual styling identical; added only a caret to signal
+  interactivity, avoiding a heavier redesign.
+- Used existing `useUpdateAccount` mutation rather than a new endpoint
+  to preserve cache invalidation behavior.
+```
+
+Categories used: `Added`, `Changed`, `Fixed`, `Removed`, `Security`, `Decisions`.
+
+## Initial Content
+
+- `/docs/*` files will be populated from the documentation pack already produced (the same content delivered in the DOCX), reformatted as Markdown with proper headings, tables, and code fences.
+- `CHANGELOG.md` will be seeded with a back-dated entry summarizing the recent work that's already shipped:
+  - HealthFlo rebrand
+  - Interactive status badge dropdown
+  - Dialog scrollability fix (`max-h-[90vh] overflow-y-auto`)
+  - CRM Reports (stale account detection, pipeline view)
+  - Presentation Mode (admin-only)
+  - Documentation pack creation
+
+## Maintenance Rule (Going Forward)
+
+I'll add a short "Documentation Maintenance" note to the root `README.md` and to `/docs/README.md` stating:
+
+> When making a **major update** (new module, schema change, auth/role change, new integration, or notable UX change), update the relevant `/docs/*.md` file **and** add a `CHANGELOG.md` entry including a **Decisions** section.
+
+This gives future AI sessions (and humans) an explicit, discoverable rule. I will follow it on every subsequent change in this project.
+
+### What counts as "major" (and gets a changelog entry)
+- New page, route, or top-level feature
+- Database schema change (new table, column, enum, RLS policy)
+- Auth/permissions change
+- New external integration or secret
+- Branding/naming changes that affect users
+- Breaking changes to shared components or hooks
+
+Trivial style tweaks, copy fixes, and bug fixes scoped to one component do **not** require a changelog entry (but can be grouped under a `Fixed` bullet if shipped alongside major work).
+
+## Out of Scope
+
+- No automated changelog tooling (e.g. changesets, semantic-release) — overkill for current team size.
+- No version numbers yet; entries are dated. We can add semver later if the app is ever published as a package.
+
+## Summary of Changes
+
+| File | Action |
 |------|--------|
-| `src/components/GlobalHeader.tsx` | NileFlow → HealthFlo |
-| `src/pages/Auth.tsx` | NileFlow → HealthFlo |
-| `src/components/crm/StatusBadgeDropdown.tsx` | **New** — shared interactive status dropdown |
-| `src/components/crm/AccountsTable.tsx` | Use StatusBadgeDropdown in status column |
-| `src/pages/crm/AccountDetail.tsx` | Use StatusBadgeDropdown in header |
-
-No database changes, no new migrations, no changes to existing hooks or forms.
-
+| `docs/README.md` | New — index |
+| `docs/ARCHITECTURE.md` | New |
+| `docs/DATABASE.md` | New |
+| `docs/AUTH.md` | New |
+| `docs/UX_FLOWS.md` | New |
+| `docs/TECH_DEBT.md` | New |
+| `CHANGELOG.md` | New — seeded with recent history |
+| `README.md` | Edited — add Documentation + Maintenance section |

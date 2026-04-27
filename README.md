@@ -162,6 +162,30 @@ The project uses Lovable Cloud, which auto-configures the `.env` file with:
 
 ---
 
+## 📚 Documentation
+
+In-repo documentation is the source of truth for how HealthFlo is built.
+
+| File | Covers |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System overview, modules, routing, integrations |
+| [docs/DATABASE.md](docs/DATABASE.md) | Tables, enums, RLS, storage buckets |
+| [docs/AUTH.md](docs/AUTH.md) | Roles, approval gating, permissions matrix |
+| [docs/UX_FLOWS.md](docs/UX_FLOWS.md) | Pricing flow, CRM flows, presentation mode |
+| [docs/TECH_DEBT.md](docs/TECH_DEBT.md) | Known gaps, risks, future cleanup |
+| [CHANGELOG.md](CHANGELOG.md) | Chronological log of major updates and decisions |
+
+### Maintenance rule
+
+When making a **major update** (new feature/route, schema change, auth change, new integration, branding change, or breaking change to a shared component), you **must**:
+
+1. Update the relevant `/docs/*.md` file(s).
+2. Add a `CHANGELOG.md` entry that includes a **Decisions** section explaining *why*.
+
+See [`docs/README.md`](docs/README.md) for the full rule and what counts as "major".
+
+---
+
 ## 📄 License
 
 This is a private internal tool. All rights reserved.
