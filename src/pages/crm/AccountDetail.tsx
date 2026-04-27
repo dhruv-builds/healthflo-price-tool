@@ -111,14 +111,19 @@ export default function AccountDetail() {
       )}
 
       {/* Tabs */}
-      <Tabs defaultValue="timeline">
+      <Tabs defaultValue={workflow ? "workflow" : "timeline"}>
         <TabsList>
+          <TabsTrigger value="workflow">Workflow{workflow ? "" : " (off)"}</TabsTrigger>
           <TabsTrigger value="timeline">Timeline ({activities.length})</TabsTrigger>
           <TabsTrigger value="contacts">Contacts ({contacts.length})</TabsTrigger>
           <TabsTrigger value="opportunity">Opportunity ({opportunities.length})</TabsTrigger>
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="workflow" className="mt-4">
+          <WorkflowPanel account={account} contacts={contacts} opportunities={opportunities} />
+        </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">
           <ActivityTimeline activities={activities} contacts={contacts} opportunities={opportunities} isLoading={activitiesLoading} />
