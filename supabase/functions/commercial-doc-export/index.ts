@@ -899,7 +899,13 @@ Deno.serve(async (req) => {
     if (sErr) throw sErr;
 
     return new Response(
-      JSON.stringify({ url: signed.signedUrl, file_path: filePath, format }),
+      JSON.stringify({
+        signedUrl: signed.signedUrl,
+        filePath,
+        url: signed.signedUrl,
+        file_path: filePath,
+        format,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
