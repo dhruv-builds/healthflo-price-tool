@@ -16,6 +16,8 @@ import AccountDetail from "./pages/crm/AccountDetail";
 import TasksPage from "./pages/crm/TasksPage";
 import ReportsPage from "./pages/crm/ReportsPage";
 import WorkflowPage from "./pages/crm/WorkflowPage";
+import CommercialDocEditor from "./pages/crm/CommercialDocEditor";
+import TemplatesPage from "./pages/crm/TemplatesPage";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +53,8 @@ const App = () => (
               <Route path="/crm" element={<CrmLayout />}>
                 <Route index element={<CrmHome />} />
                 <Route path="accounts/:id" element={<AccountDetail />} />
+                <Route path="accounts/:accountId/docs/:docId" element={<CommercialDocEditor />} />
+                <Route path="templates" element={<TemplatesPage />} />
                 <Route path="workflows" element={<WorkflowPage />} />
                 <Route path="tasks" element={<TasksPage />} />
                 <Route path="reports" element={<ReportsPage />} />
