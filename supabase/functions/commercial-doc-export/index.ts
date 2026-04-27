@@ -10,10 +10,12 @@ import {
   AlignmentType,
   BorderStyle,
   Document,
+  Footer,
   HeadingLevel,
   ImageRun,
   LevelFormat,
   PageBreak,
+  PageNumber,
   PageOrientation,
   Packer,
   Paragraph,
@@ -98,23 +100,53 @@ function tiptapToPlainParagraphs(doc?: TiptapDoc): { text: string; marks: string
 }
 
 // ---------- DOCX renderer ----------
-function tiptapToDocxParagraphs(body?: TiptapDoc): Paragraph[] {
-  const paras = tiptapToPlainParagraphs(body);
-  return paras.map(
-    (runs) =>
-      new Paragraph({
+// Walks tiptap and emits Paragraphs that respect bullet/numbered list semantics
+// using docx-js native numbering references (no manual "•" or "1." prefixes).
+function tiptapToDocxBlocks(body?: TiptapDoc): Paragraph[] {
+  if (!body) return [new Paragraph({ children: [new TextRun("")] })];
+  const out: Paragraph[] = [];
+  const runFromTextNode = (n: TiptapNode): TextRun =>
+    new TextRun({
+      text: n.text ?? "",
+      bold: (n.marks ?? []).some((m) => m.type === "bold"),
+      italics: (n.marks ?? []).some((m) => m.type === "italic"),
+      underline: (n.marks ?? []).some((m) => m.type === "underline") ? {} : undefined,
+    });
+  const collectInline = (node: TiptapNode): TextRun[] => {
+    const runs: TextRun[] = [];
+    const walk = (n: TiptapNode) => {
+      if (n.type === "text") runs.push(runFromTextNode(n));
+      else if (n.content) n.content.forEach(walk);
+    };
+    node.content?.forEach(walk);
+    return runs.length ? runs : [new TextRun("")];
+  };
+  const walkBlock = (node: TiptapNode, listCtx?: "bullet" | "number") => {
+    if (!node) return;
+    if (node.type === "paragraph" || node.type === "heading") {
+      const opts: any = {
         spacing: { after: 120 },
-        children: runs.map(
-          (r) =>
-            new TextRun({
-              text: r.text,
-              bold: r.marks.includes("bold"),
-              italics: r.marks.includes("italic"),
-              underline: r.marks.includes("underline") ? {} : undefined,
-            })
-        ),
-      })
-  );
+        children: collectInline(node),
+      };
+      if (listCtx === "bullet") opts.numbering = { reference: "doc-bullets", level: 0 };
+      else if (listCtx === "number") opts.numbering = { reference: "doc-numbers", level: 0 };
+      out.push(new Paragraph(opts));
+    } else if (node.type === "bulletList") {
+      node.content?.forEach((li) => li.content?.forEach((p) => walkBlock(p, "bullet")));
+    } else if (node.type === "orderedList") {
+      node.content?.forEach((li) => li.content?.forEach((p) => walkBlock(p, "number")));
+    } else if (node.content) {
+      node.content.forEach((c) => walkBlock(c, listCtx));
+    }
+  };
+  body.content?.forEach((c) => walkBlock(c));
+  if (!out.length) out.push(new Paragraph({ children: [new TextRun("")] }));
+  return out;
+}
+
+// Backward-compatible alias used by existing callers
+function tiptapToDocxParagraphs(body?: TiptapDoc): Paragraph[] {
+  return tiptapToDocxBlocks(body);
 }
 
 function makeDocxTable(headers: string[], rows: string[][], totalWidth = 9360): Table {
@@ -172,10 +204,13 @@ function moneyStr(n: number | undefined, currency: string): string {
 
 function renderCoverDocx(cover: any, meta: any): (Paragraph | Table)[] {
   const out: (Paragraph | Table)[] = [];
+  const variant = cover?.variant ?? "two_party_centered";
+  const align = variant === "two_party_left" ? AlignmentType.LEFT : AlignmentType.CENTER;
+
   out.push(new Paragraph({ children: [new TextRun("")], spacing: { before: 1200 } }));
   out.push(
     new Paragraph({
-      alignment: AlignmentType.CENTER,
+      alignment: align,
       heading: HeadingLevel.TITLE,
       children: [new TextRun({ text: cover?.title ?? meta?.title ?? "", bold: true, size: 48 })],
     })
@@ -183,7 +218,7 @@ function renderCoverDocx(cover: any, meta: any): (Paragraph | Table)[] {
   if (cover?.subtitle || meta?.subtitle) {
     out.push(
       new Paragraph({
-        alignment: AlignmentType.CENTER,
+        alignment: align,
         spacing: { after: 600 },
         children: [
           new TextRun({ text: cover?.subtitle ?? meta?.subtitle ?? "", italics: true, size: 28 }),
@@ -200,45 +235,106 @@ function renderCoverDocx(cover: any, meta: any): (Paragraph | Table)[] {
       })
     );
   }
-  const partyPara = (label: string, party: any) => {
+
+  const partyParas = (label: string, party: any, alignOverride?: typeof AlignmentType.CENTER): Paragraph[] => {
+    const a = alignOverride ?? align;
     const lines: Paragraph[] = [];
     lines.push(
       new Paragraph({
-        alignment: AlignmentType.CENTER,
+        alignment: a,
         children: [new TextRun({ text: label, bold: true, size: 22 })],
       })
     );
     lines.push(
       new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text: party?.legalName ?? "", size: 26 })],
+        alignment: a,
+        children: [new TextRun({ text: party?.legalName ?? "", size: 26, bold: true })],
       })
     );
+    if (party?.tagline) {
+      lines.push(
+        new Paragraph({
+          alignment: a,
+          children: [new TextRun({ text: party.tagline, italics: true, size: 20 })],
+        })
+      );
+    }
     if (party?.address) {
       lines.push(
         new Paragraph({
-          alignment: AlignmentType.CENTER,
+          alignment: a,
           children: [new TextRun({ text: party.address, size: 20 })],
         })
       );
     }
     return lines;
   };
-  out.push(...partyPara("VENDOR", cover?.vendorParty));
-  out.push(new Paragraph({ children: [new TextRun("")], spacing: { before: 200, after: 200 } }));
-  out.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text: "AND", bold: true })],
-    })
-  );
-  out.push(new Paragraph({ children: [new TextRun("")], spacing: { before: 200, after: 200 } }));
-  out.push(...partyPara("CLIENT", cover?.clientParty));
+
+  if (variant === "branded_split") {
+    // Two-column side-by-side parties (vendor | client)
+    out.push(
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [4680, 4680],
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 4680, type: WidthType.DXA },
+                margins: { top: 120, bottom: 120, left: 160, right: 160 },
+                borders: {
+                  top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  right: { style: BorderStyle.SINGLE, size: 6, color: "BFBFBF" },
+                },
+                children: partyParas("VENDOR", cover?.vendorParty, AlignmentType.CENTER),
+              }),
+              new TableCell({
+                width: { size: 4680, type: WidthType.DXA },
+                margins: { top: 120, bottom: 120, left: 160, right: 160 },
+                borders: {
+                  top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                },
+                children: partyParas("CLIENT", cover?.clientParty, AlignmentType.CENTER),
+              }),
+            ],
+          }),
+        ],
+      })
+    );
+  } else {
+    out.push(...partyParas("VENDOR", cover?.vendorParty));
+    out.push(new Paragraph({ children: [new TextRun("")], spacing: { before: 200, after: 200 } }));
+    out.push(
+      new Paragraph({
+        alignment: align,
+        children: [new TextRun({ text: "AND", bold: true })],
+      })
+    );
+    out.push(new Paragraph({ children: [new TextRun("")], spacing: { before: 200, after: 200 } }));
+    out.push(...partyParas("CLIENT", cover?.clientParty));
+  }
+
+  if (cover?.executionLocation) {
+    out.push(
+      new Paragraph({
+        alignment: align,
+        spacing: { before: 600 },
+        children: [
+          new TextRun({ text: `Executed at: ${cover.executionLocation}`, size: 22, italics: true }),
+        ],
+      })
+    );
+  }
   if (meta?.effectiveDate) {
     out.push(
       new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { before: 800 },
+        alignment: align,
+        spacing: { before: 200 },
         children: [new TextRun({ text: `Effective Date: ${meta.effectiveDate}`, size: 22 })],
       })
     );
@@ -250,14 +346,57 @@ function renderCoverDocx(cover: any, meta: any): (Paragraph | Table)[] {
 function renderSectionsDocx(sections: any[]): (Paragraph | Table)[] {
   const out: (Paragraph | Table)[] = [];
   sections.forEach((s, i) => {
+    const num = i + 1;
     out.push(
       new Paragraph({
         heading: HeadingLevel.HEADING_1,
         spacing: { before: 240, after: 160 },
-        children: [new TextRun({ text: `${i + 1}. ${s.title}`, bold: true, size: 30 })],
+        children: [new TextRun({ text: `${num}. ${s.title}`, bold: true, size: 30 })],
       })
     );
-    out.push(...tiptapToDocxParagraphs(s.body));
+    out.push(...tiptapToDocxBlocks(s.body));
+
+    // Facility coverage table
+    if (s.coverage) {
+      const cov = s.coverage;
+      if (cov.totalCount != null) {
+        out.push(
+          new Paragraph({
+            spacing: { before: 120, after: 80 },
+            children: [
+              new TextRun({ text: "Total facilities covered: ", bold: true }),
+              new TextRun({ text: String(cov.totalCount) }),
+            ],
+          })
+        );
+      }
+      if (cov.rows?.length) {
+        out.push(
+          makeDocxTable(
+            ["Facility Type", "Count", "Notes"],
+            cov.rows.map((r: any) => [
+              r.label ?? "",
+              r.count != null ? String(r.count) : "—",
+              r.description ?? "",
+            ])
+          )
+        );
+      }
+      if (cov.notes) out.push(...tiptapToDocxBlocks(cov.notes));
+    }
+
+    // Subsections (e.g., 3.1, 3.2)
+    s.subsections?.forEach((ss: any, j: number) => {
+      const number = ss.number ?? `${num}.${j + 1}`;
+      out.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 200, after: 100 },
+          children: [new TextRun({ text: `${number} ${ss.title}`, bold: true, size: 26 })],
+        })
+      );
+      out.push(...tiptapToDocxBlocks(ss.body));
+    });
   });
   return out;
 }
@@ -384,11 +523,18 @@ function renderPrimitiveDocx(p: any): (Paragraph | Table)[] {
       return p.items.map((item: TiptapDoc) => {
         const runs = tiptapToPlainParagraphs(item)[0] ?? [];
         return new Paragraph({
-          children: [
-            new TextRun(p.kind === "bullets" ? "• " : "1. "),
-            ...runs.map((r) => new TextRun({ text: r.text, bold: r.marks.includes("bold") })),
-          ],
-          indent: { left: 720, hanging: 360 },
+          numbering: {
+            reference: p.kind === "bullets" ? "doc-bullets" : "doc-numbers",
+            level: 0,
+          },
+          children: runs.map(
+            (r) =>
+              new TextRun({
+                text: r.text,
+                bold: r.marks.includes("bold"),
+                italics: r.marks.includes("italic"),
+              })
+          ),
         });
       });
     case "callout":
@@ -445,22 +591,46 @@ function renderPrimitiveDocx(p: any): (Paragraph | Table)[] {
 
 function renderSignatoryDocx(sig: any): Paragraph[] {
   if (!sig) return [];
-  return [
+  const lines: Paragraph[] = [];
+  lines.push(
     new Paragraph({
-      spacing: { before: 400, after: 100 },
-      children: [new TextRun({ text: sig.legalName ?? "", bold: true })],
-    }),
+      spacing: { before: 200, after: 100 },
+      children: [new TextRun({ text: "For ", italics: true }), new TextRun({ text: sig.legalName ?? "", bold: true })],
+    })
+  );
+  lines.push(
     new Paragraph({
       spacing: { before: 600, after: 0 },
       border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 1 } },
       children: [new TextRun("")],
-    }),
-    new Paragraph({ children: [new TextRun({ text: sig.signatoryName ?? "" })] }),
-    new Paragraph({ children: [new TextRun({ text: sig.designation ?? "", italics: true })] }),
-    sig.date
-      ? new Paragraph({ children: [new TextRun({ text: `Date: ${sig.date}` })] })
-      : new Paragraph({ children: [new TextRun("")] }),
-  ];
+    })
+  );
+  lines.push(
+    new Paragraph({
+      spacing: { before: 80 },
+      children: [
+        new TextRun({ text: "Name: ", bold: true }),
+        new TextRun({ text: sig.signatoryName ?? "" }),
+      ],
+    })
+  );
+  lines.push(
+    new Paragraph({
+      children: [
+        new TextRun({ text: "Designation: ", bold: true }),
+        new TextRun({ text: sig.designation ?? "", italics: true }),
+      ],
+    })
+  );
+  lines.push(
+    new Paragraph({
+      children: [
+        new TextRun({ text: "Date: ", bold: true }),
+        new TextRun({ text: sig.date ?? "" }),
+      ],
+    })
+  );
+  return lines;
 }
 
 function renderSignaturePageDocx(sig: any): (Paragraph | Table)[] {
@@ -470,16 +640,28 @@ function renderSignaturePageDocx(sig: any): (Paragraph | Table)[] {
     new Paragraph({
       heading: HeadingLevel.HEADING_1,
       alignment: AlignmentType.CENTER,
-      spacing: { after: 400 },
+      spacing: { after: 200 },
       children: [new TextRun({ text: "Signatures", bold: true })],
     })
   );
+  if (sig.witnessClause) {
+    out.push(
+      new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 400 },
+        children: [new TextRun({ text: sig.witnessClause, italics: true })],
+      })
+    );
+  }
   if (sig.effectiveDate) {
     out.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: 400 },
-        children: [new TextRun({ text: `Effective Date: ${sig.effectiveDate}` })],
+        spacing: { after: 300 },
+        children: [
+          new TextRun({ text: "Effective Date: ", bold: true }),
+          new TextRun({ text: sig.effectiveDate }),
+        ],
       })
     );
   }
@@ -524,11 +706,40 @@ async function renderDocx(doc: DocumentDoc): Promise<Uint8Array> {
   if (doc.signature) children.push(...renderSignaturePageDocx(doc.signature));
   if (!children.length) children.push(new Paragraph({ children: [new TextRun(doc.meta?.title ?? "Document")] }));
 
+  const docTitle = doc.meta?.title ?? "Document";
   const document = new Document({
     creator: "HealthFlo",
-    title: doc.meta?.title ?? "Document",
+    title: docTitle,
     styles: {
       default: { document: { run: { font: "Calibri", size: 22 } } },
+    },
+    numbering: {
+      config: [
+        {
+          reference: "doc-bullets",
+          levels: [
+            {
+              level: 0,
+              format: LevelFormat.BULLET,
+              text: "\u2022",
+              alignment: AlignmentType.LEFT,
+              style: { paragraph: { indent: { left: 720, hanging: 360 } } },
+            },
+          ],
+        },
+        {
+          reference: "doc-numbers",
+          levels: [
+            {
+              level: 0,
+              format: LevelFormat.DECIMAL,
+              text: "%1.",
+              alignment: AlignmentType.LEFT,
+              style: { paragraph: { indent: { left: 720, hanging: 360 } } },
+            },
+          ],
+        },
+      ],
     },
     sections: [
       {
@@ -537,6 +748,21 @@ async function renderDocx(doc: DocumentDoc): Promise<Uint8Array> {
             size: { width: 12240, height: 15840, orientation: PageOrientation.PORTRAIT },
             margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
           },
+        },
+        footers: {
+          default: new Footer({
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: `${docTitle}  ·  Page `, size: 18, color: "808080" }),
+                  new TextRun({ children: [PageNumber.CURRENT], size: 18, color: "808080" }),
+                  new TextRun({ text: " of ", size: 18, color: "808080" }),
+                  new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 18, color: "808080" }),
+                ],
+              }),
+            ],
+          }),
         },
         children,
       },
@@ -547,17 +773,53 @@ async function renderDocx(doc: DocumentDoc): Promise<Uint8Array> {
 }
 
 // ---------- PDF renderer (pdfmake) ----------
+// Walks tiptap and emits pdfmake content with native ul/ol nesting.
 function tiptapToPdfText(body?: TiptapDoc): any[] {
-  const paras = tiptapToPlainParagraphs(body);
-  return paras.map((runs) => ({
-    text: runs.map((r) => ({
-      text: r.text,
-      bold: r.marks.includes("bold"),
-      italics: r.marks.includes("italic"),
-      decoration: r.marks.includes("underline") ? "underline" : undefined,
-    })),
-    margin: [0, 0, 0, 6],
-  }));
+  if (!body) return [];
+  const out: any[] = [];
+  const inlineFromNode = (node: TiptapNode): any[] => {
+    const runs: any[] = [];
+    const walk = (n: TiptapNode) => {
+      if (n.type === "text") {
+        runs.push({
+          text: n.text ?? "",
+          bold: (n.marks ?? []).some((m) => m.type === "bold"),
+          italics: (n.marks ?? []).some((m) => m.type === "italic"),
+          decoration: (n.marks ?? []).some((m) => m.type === "underline") ? "underline" : undefined,
+        });
+      } else if (n.content) n.content.forEach(walk);
+    };
+    node.content?.forEach(walk);
+    return runs.length ? runs : [{ text: "" }];
+  };
+  const walkBlock = (node: TiptapNode) => {
+    if (!node) return;
+    if (node.type === "paragraph" || node.type === "heading") {
+      out.push({ text: inlineFromNode(node), margin: [0, 0, 0, 6] });
+    } else if (node.type === "bulletList") {
+      out.push({
+        ul: (node.content ?? []).map((li) => {
+          const runs: any[] = [];
+          li.content?.forEach((p) => runs.push(...inlineFromNode(p)));
+          return { text: runs };
+        }),
+        margin: [0, 0, 0, 6],
+      });
+    } else if (node.type === "orderedList") {
+      out.push({
+        ol: (node.content ?? []).map((li) => {
+          const runs: any[] = [];
+          li.content?.forEach((p) => runs.push(...inlineFromNode(p)));
+          return { text: runs };
+        }),
+        margin: [0, 0, 0, 6],
+      });
+    } else if (node.content) {
+      node.content.forEach(walkBlock);
+    }
+  };
+  body.content?.forEach(walkBlock);
+  return out.length ? out : [{ text: "" }];
 }
 
 function pdfTable(headers: string[], rows: string[][]): any {
@@ -578,13 +840,15 @@ function pdfTable(headers: string[], rows: string[][]): any {
 }
 
 function renderCoverPdf(cover: any, meta: any): any[] {
+  const variant = cover?.variant ?? "two_party_centered";
+  const align = variant === "two_party_left" ? "left" : "center";
   const out: any[] = [
     { text: "", margin: [0, 80, 0, 0] },
     {
       text: cover?.title ?? meta?.title ?? "",
       fontSize: 28,
       bold: true,
-      alignment: "center",
+      alignment: align,
       margin: [0, 0, 0, 8],
     },
   ];
@@ -592,7 +856,7 @@ function renderCoverPdf(cover: any, meta: any): any[] {
     out.push({
       text: cover?.subtitle ?? meta?.subtitle ?? "",
       italics: true,
-      alignment: "center",
+      alignment: align,
       fontSize: 14,
       margin: [0, 0, 0, 24],
     });
@@ -603,19 +867,46 @@ function renderCoverPdf(cover: any, meta: any): any[] {
       margin: [0, 0, 0, 24],
     });
   }
-  const party = (label: string, p: any) => [
-    { text: label, bold: true, alignment: "center", margin: [0, 8, 0, 2] },
-    { text: p?.legalName ?? "", alignment: "center", fontSize: 14 },
-    p?.address ? { text: p.address, alignment: "center", fontSize: 10 } : null,
-  ].filter(Boolean);
-  out.push(...party("VENDOR", cover?.vendorParty));
-  out.push({ text: "AND", bold: true, alignment: "center", margin: [0, 12, 0, 12] });
-  out.push(...party("CLIENT", cover?.clientParty));
+  const partyStack = (label: string, p: any): any => ({
+    stack: [
+      { text: label, bold: true, alignment: "center", margin: [0, 8, 0, 2] },
+      { text: p?.legalName ?? "", alignment: "center", fontSize: 14, bold: true },
+      p?.tagline ? { text: p.tagline, alignment: "center", fontSize: 10, italics: true } : null,
+      p?.address ? { text: p.address, alignment: "center", fontSize: 10 } : null,
+    ].filter(Boolean),
+  });
+
+  if (variant === "branded_split") {
+    out.push({
+      columns: [partyStack("VENDOR", cover?.vendorParty), partyStack("CLIENT", cover?.clientParty)],
+      columnGap: 24,
+      margin: [0, 16, 0, 0],
+    });
+  } else {
+    const party = (label: string, p: any) => [
+      { text: label, bold: true, alignment: "center", margin: [0, 8, 0, 2] },
+      { text: p?.legalName ?? "", alignment: "center", fontSize: 14, bold: true },
+      p?.tagline ? { text: p.tagline, alignment: "center", fontSize: 10, italics: true } : null,
+      p?.address ? { text: p.address, alignment: "center", fontSize: 10 } : null,
+    ].filter(Boolean);
+    out.push(...party("VENDOR", cover?.vendorParty));
+    out.push({ text: "AND", bold: true, alignment: "center", margin: [0, 12, 0, 12] });
+    out.push(...party("CLIENT", cover?.clientParty));
+  }
+
+  if (cover?.executionLocation) {
+    out.push({
+      text: `Executed at: ${cover.executionLocation}`,
+      alignment: "center",
+      italics: true,
+      margin: [0, 28, 0, 0],
+    });
+  }
   if (meta?.effectiveDate) {
     out.push({
       text: `Effective Date: ${meta.effectiveDate}`,
       alignment: "center",
-      margin: [0, 32, 0, 0],
+      margin: [0, 8, 0, 0],
     });
   }
   out.push({ text: "", pageBreak: "after" });
@@ -625,8 +916,46 @@ function renderCoverPdf(cover: any, meta: any): any[] {
 function renderSectionsPdf(sections: any[]): any[] {
   const out: any[] = [];
   sections.forEach((s, i) => {
-    out.push({ text: `${i + 1}. ${s.title}`, fontSize: 16, bold: true, margin: [0, 12, 0, 8] });
+    const num = i + 1;
+    out.push({ text: `${num}. ${s.title}`, fontSize: 16, bold: true, margin: [0, 12, 0, 8] });
     out.push(...tiptapToPdfText(s.body));
+
+    if (s.coverage) {
+      const cov = s.coverage;
+      if (cov.totalCount != null) {
+        out.push({
+          text: [
+            { text: "Total facilities covered: ", bold: true },
+            { text: String(cov.totalCount) },
+          ],
+          margin: [0, 4, 0, 4],
+        });
+      }
+      if (cov.rows?.length) {
+        out.push(
+          pdfTable(
+            ["Facility Type", "Count", "Notes"],
+            cov.rows.map((r: any) => [
+              r.label ?? "",
+              r.count != null ? String(r.count) : "—",
+              r.description ?? "",
+            ])
+          )
+        );
+      }
+      if (cov.notes) out.push(...tiptapToPdfText(cov.notes));
+    }
+
+    s.subsections?.forEach((ss: any, j: number) => {
+      const number = ss.number ?? `${num}.${j + 1}`;
+      out.push({
+        text: `${number} ${ss.title}`,
+        fontSize: 13,
+        bold: true,
+        margin: [0, 8, 0, 4],
+      });
+      out.push(...tiptapToPdfText(ss.body));
+    });
   });
   return out;
 }
@@ -742,24 +1071,37 @@ function renderPrimitivePdf(p: any): any[] {
 function renderSignatoryPdf(sig: any): any[] {
   if (!sig) return [];
   return [
-    { text: sig.legalName ?? "", bold: true, margin: [0, 16, 0, 4] },
+    {
+      text: [
+        { text: "For ", italics: true },
+        { text: sig.legalName ?? "", bold: true },
+      ],
+      margin: [0, 16, 0, 4],
+    },
     {
       canvas: [
-        { type: "line", x1: 0, y1: 24, x2: 220, y2: 24, lineWidth: 0.7, lineColor: "#000" },
+        { type: "line", x1: 0, y1: 30, x2: 220, y2: 30, lineWidth: 0.7, lineColor: "#000" },
       ],
     },
-    { text: sig.signatoryName ?? "", margin: [0, 4, 0, 0] },
-    { text: sig.designation ?? "", italics: true },
-    sig.date ? { text: `Date: ${sig.date}` } : { text: "" },
+    { text: [{ text: "Name: ", bold: true }, { text: sig.signatoryName ?? "" }], margin: [0, 6, 0, 0] },
+    { text: [{ text: "Designation: ", bold: true }, { text: sig.designation ?? "", italics: true }] },
+    { text: [{ text: "Date: ", bold: true }, { text: sig.date ?? "" }] },
   ];
 }
 
 function renderSignaturePagePdf(sig: any): any[] {
   return [
     { text: "", pageBreak: "before" },
-    { text: "Signatures", fontSize: 18, bold: true, alignment: "center", margin: [0, 0, 0, 16] },
+    { text: "Signatures", fontSize: 18, bold: true, alignment: "center", margin: [0, 0, 0, 12] },
+    sig.witnessClause
+      ? { text: sig.witnessClause, italics: true, alignment: "justify", margin: [0, 0, 0, 24] }
+      : { text: "" },
     sig.effectiveDate
-      ? { text: `Effective Date: ${sig.effectiveDate}`, alignment: "center", margin: [0, 0, 0, 24] }
+      ? {
+          text: [{ text: "Effective Date: ", bold: true }, { text: sig.effectiveDate }],
+          alignment: "center",
+          margin: [0, 0, 0, 24],
+        }
       : { text: "" },
     {
       columns: [
@@ -780,12 +1122,20 @@ async function renderPdf(doc: DocumentDoc): Promise<Uint8Array> {
   if (doc.signature) content.push(...renderSignaturePagePdf(doc.signature));
   if (!content.length) content.push({ text: doc.meta?.title ?? "Document" });
 
+  const docTitle = doc.meta?.title ?? "Document";
   const docDef = {
     pageSize: "LETTER",
     pageMargins: [60, 60, 60, 60],
     defaultStyle: { font: "Roboto", fontSize: 10 },
-    info: { title: doc.meta?.title ?? "Document", creator: "HealthFlo" },
+    info: { title: docTitle, creator: "HealthFlo" },
     content,
+    footer: (currentPage: number, pageCount: number) => ({
+      text: `${docTitle}  ·  Page ${currentPage} of ${pageCount}`,
+      alignment: "center",
+      fontSize: 8,
+      color: "#808080",
+      margin: [0, 20, 0, 0],
+    }),
   };
 
   return await new Promise<Uint8Array>((resolve, reject) => {
