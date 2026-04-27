@@ -515,6 +515,257 @@ export type Database = {
           },
         ]
       }
+      workflow_checklist_items: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          evidence_type: string | null
+          id: string
+          is_complete: boolean
+          is_required: boolean
+          item_key: string
+          label: string
+          notes: string | null
+          stage: Database["public"]["Enums"]["workflow_stage"]
+          updated_at: string
+          workflow_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          evidence_type?: string | null
+          id?: string
+          is_complete?: boolean
+          is_required?: boolean
+          item_key: string
+          label: string
+          notes?: string | null
+          stage: Database["public"]["Enums"]["workflow_stage"]
+          updated_at?: string
+          workflow_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          evidence_type?: string | null
+          id?: string
+          is_complete?: boolean
+          is_required?: boolean
+          item_key?: string
+          label?: string
+          notes?: string | null
+          stage?: Database["public"]["Enums"]["workflow_stage"]
+          updated_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_checklist_items_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_collaborators: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+          workflow_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+          workflow_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_collaborators_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_records: {
+        Row: {
+          account_id: string
+          blocker_reason: string | null
+          blocker_type:
+            | Database["public"]["Enums"]["workflow_blocker_type"]
+            | null
+          created_at: string
+          created_by: string
+          id: string
+          is_blocked: boolean
+          last_reviewed_at: string | null
+          linked_client_id: string | null
+          next_action_due_at: string | null
+          next_action_title: string | null
+          owner_id: string | null
+          reference_version_id: string | null
+          seed_confidence:
+            | Database["public"]["Enums"]["workflow_seed_confidence"]
+            | null
+          seed_notes: string | null
+          stage: Database["public"]["Enums"]["workflow_stage"]
+          stage_entered_at: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          blocker_reason?: string | null
+          blocker_type?:
+            | Database["public"]["Enums"]["workflow_blocker_type"]
+            | null
+          created_at?: string
+          created_by: string
+          id?: string
+          is_blocked?: boolean
+          last_reviewed_at?: string | null
+          linked_client_id?: string | null
+          next_action_due_at?: string | null
+          next_action_title?: string | null
+          owner_id?: string | null
+          reference_version_id?: string | null
+          seed_confidence?:
+            | Database["public"]["Enums"]["workflow_seed_confidence"]
+            | null
+          seed_notes?: string | null
+          stage?: Database["public"]["Enums"]["workflow_stage"]
+          stage_entered_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          blocker_reason?: string | null
+          blocker_type?:
+            | Database["public"]["Enums"]["workflow_blocker_type"]
+            | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_blocked?: boolean
+          last_reviewed_at?: string | null
+          linked_client_id?: string | null
+          next_action_due_at?: string | null
+          next_action_title?: string | null
+          owner_id?: string | null
+          reference_version_id?: string | null
+          seed_confidence?:
+            | Database["public"]["Enums"]["workflow_seed_confidence"]
+            | null
+          seed_notes?: string | null
+          stage?: Database["public"]["Enums"]["workflow_stage"]
+          stage_entered_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      workflow_stage_history: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          from_stage: Database["public"]["Enums"]["workflow_stage"] | null
+          id: string
+          reason: string | null
+          source: string
+          to_stage: Database["public"]["Enums"]["workflow_stage"]
+          workflow_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          from_stage?: Database["public"]["Enums"]["workflow_stage"] | null
+          id?: string
+          reason?: string | null
+          source?: string
+          to_stage: Database["public"]["Enums"]["workflow_stage"]
+          workflow_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          from_stage?: Database["public"]["Enums"]["workflow_stage"] | null
+          id?: string
+          reason?: string | null
+          source?: string
+          to_stage?: Database["public"]["Enums"]["workflow_stage"]
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_stage_history_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_stage_suggestions: {
+        Row: {
+          created_at: string
+          id: string
+          reason_code: string
+          reason_text: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["workflow_suggestion_status"]
+          suggested_stage: Database["public"]["Enums"]["workflow_stage"]
+          workflow_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason_code: string
+          reason_text?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["workflow_suggestion_status"]
+          suggested_stage: Database["public"]["Enums"]["workflow_stage"]
+          workflow_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason_code?: string
+          reason_text?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["workflow_suggestion_status"]
+          suggested_stage?: Database["public"]["Enums"]["workflow_stage"]
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_stage_suggestions_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -528,6 +779,10 @@ export type Database = {
         Returns: boolean
       }
       is_approved_user: { Args: { _user_id: string }; Returns: boolean }
+      seed_default_checklist: {
+        Args: { _workflow_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "employee"
@@ -559,6 +814,26 @@ export type Database = {
         | "Existing Relationship"
       crm_task_priority: "Low" | "Medium" | "High"
       crm_task_status: "Open" | "In Progress" | "Done"
+      workflow_blocker_type:
+        | "Awaiting Customer"
+        | "Awaiting Internal"
+        | "Legal"
+        | "Pricing"
+        | "Technical"
+        | "Other"
+      workflow_seed_confidence: "confirmed" | "inferred" | "needs_review"
+      workflow_stage:
+        | "Lead"
+        | "Discovery"
+        | "Pricing"
+        | "Negotiation"
+        | "MoU"
+        | "Pricing Agreement"
+        | "Onboarding"
+        | "Live"
+        | "Collections"
+        | "Lost"
+      workflow_suggestion_status: "pending" | "accepted" | "dismissed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -718,6 +993,28 @@ export const Constants = {
       ],
       crm_task_priority: ["Low", "Medium", "High"],
       crm_task_status: ["Open", "In Progress", "Done"],
+      workflow_blocker_type: [
+        "Awaiting Customer",
+        "Awaiting Internal",
+        "Legal",
+        "Pricing",
+        "Technical",
+        "Other",
+      ],
+      workflow_seed_confidence: ["confirmed", "inferred", "needs_review"],
+      workflow_stage: [
+        "Lead",
+        "Discovery",
+        "Pricing",
+        "Negotiation",
+        "MoU",
+        "Pricing Agreement",
+        "Onboarding",
+        "Live",
+        "Collections",
+        "Lost",
+      ],
+      workflow_suggestion_status: ["pending", "accepted", "dismissed"],
     },
   },
 } as const
