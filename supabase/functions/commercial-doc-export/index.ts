@@ -202,10 +202,13 @@ function moneyStr(n: number | undefined, currency: string): string {
 
 function renderCoverDocx(cover: any, meta: any): (Paragraph | Table)[] {
   const out: (Paragraph | Table)[] = [];
+  const variant = cover?.variant ?? "two_party_centered";
+  const align = variant === "two_party_left" ? AlignmentType.LEFT : AlignmentType.CENTER;
+
   out.push(new Paragraph({ children: [new TextRun("")], spacing: { before: 1200 } }));
   out.push(
     new Paragraph({
-      alignment: AlignmentType.CENTER,
+      alignment: align,
       heading: HeadingLevel.TITLE,
       children: [new TextRun({ text: cover?.title ?? meta?.title ?? "", bold: true, size: 48 })],
     })
@@ -213,7 +216,7 @@ function renderCoverDocx(cover: any, meta: any): (Paragraph | Table)[] {
   if (cover?.subtitle || meta?.subtitle) {
     out.push(
       new Paragraph({
-        alignment: AlignmentType.CENTER,
+        alignment: align,
         spacing: { after: 600 },
         children: [
           new TextRun({ text: cover?.subtitle ?? meta?.subtitle ?? "", italics: true, size: 28 }),
@@ -230,45 +233,106 @@ function renderCoverDocx(cover: any, meta: any): (Paragraph | Table)[] {
       })
     );
   }
-  const partyPara = (label: string, party: any) => {
+
+  const partyParas = (label: string, party: any, alignOverride?: typeof AlignmentType.CENTER): Paragraph[] => {
+    const a = alignOverride ?? align;
     const lines: Paragraph[] = [];
     lines.push(
       new Paragraph({
-        alignment: AlignmentType.CENTER,
+        alignment: a,
         children: [new TextRun({ text: label, bold: true, size: 22 })],
       })
     );
     lines.push(
       new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text: party?.legalName ?? "", size: 26 })],
+        alignment: a,
+        children: [new TextRun({ text: party?.legalName ?? "", size: 26, bold: true })],
       })
     );
+    if (party?.tagline) {
+      lines.push(
+        new Paragraph({
+          alignment: a,
+          children: [new TextRun({ text: party.tagline, italics: true, size: 20 })],
+        })
+      );
+    }
     if (party?.address) {
       lines.push(
         new Paragraph({
-          alignment: AlignmentType.CENTER,
+          alignment: a,
           children: [new TextRun({ text: party.address, size: 20 })],
         })
       );
     }
     return lines;
   };
-  out.push(...partyPara("VENDOR", cover?.vendorParty));
-  out.push(new Paragraph({ children: [new TextRun("")], spacing: { before: 200, after: 200 } }));
-  out.push(
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      children: [new TextRun({ text: "AND", bold: true })],
-    })
-  );
-  out.push(new Paragraph({ children: [new TextRun("")], spacing: { before: 200, after: 200 } }));
-  out.push(...partyPara("CLIENT", cover?.clientParty));
+
+  if (variant === "branded_split") {
+    // Two-column side-by-side parties (vendor | client)
+    out.push(
+      new Table({
+        width: { size: 9360, type: WidthType.DXA },
+        columnWidths: [4680, 4680],
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 4680, type: WidthType.DXA },
+                margins: { top: 120, bottom: 120, left: 160, right: 160 },
+                borders: {
+                  top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  right: { style: BorderStyle.SINGLE, size: 6, color: "BFBFBF" },
+                },
+                children: partyParas("VENDOR", cover?.vendorParty, AlignmentType.CENTER),
+              }),
+              new TableCell({
+                width: { size: 4680, type: WidthType.DXA },
+                margins: { top: 120, bottom: 120, left: 160, right: 160 },
+                borders: {
+                  top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                  right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                },
+                children: partyParas("CLIENT", cover?.clientParty, AlignmentType.CENTER),
+              }),
+            ],
+          }),
+        ],
+      })
+    );
+  } else {
+    out.push(...partyParas("VENDOR", cover?.vendorParty));
+    out.push(new Paragraph({ children: [new TextRun("")], spacing: { before: 200, after: 200 } }));
+    out.push(
+      new Paragraph({
+        alignment: align,
+        children: [new TextRun({ text: "AND", bold: true })],
+      })
+    );
+    out.push(new Paragraph({ children: [new TextRun("")], spacing: { before: 200, after: 200 } }));
+    out.push(...partyParas("CLIENT", cover?.clientParty));
+  }
+
+  if (cover?.executionLocation) {
+    out.push(
+      new Paragraph({
+        alignment: align,
+        spacing: { before: 600 },
+        children: [
+          new TextRun({ text: `Executed at: ${cover.executionLocation}`, size: 22, italics: true }),
+        ],
+      })
+    );
+  }
   if (meta?.effectiveDate) {
     out.push(
       new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { before: 800 },
+        alignment: align,
+        spacing: { before: 200 },
         children: [new TextRun({ text: `Effective Date: ${meta.effectiveDate}`, size: 22 })],
       })
     );
@@ -280,14 +344,57 @@ function renderCoverDocx(cover: any, meta: any): (Paragraph | Table)[] {
 function renderSectionsDocx(sections: any[]): (Paragraph | Table)[] {
   const out: (Paragraph | Table)[] = [];
   sections.forEach((s, i) => {
+    const num = i + 1;
     out.push(
       new Paragraph({
         heading: HeadingLevel.HEADING_1,
         spacing: { before: 240, after: 160 },
-        children: [new TextRun({ text: `${i + 1}. ${s.title}`, bold: true, size: 30 })],
+        children: [new TextRun({ text: `${num}. ${s.title}`, bold: true, size: 30 })],
       })
     );
-    out.push(...tiptapToDocxParagraphs(s.body));
+    out.push(...tiptapToDocxBlocks(s.body));
+
+    // Facility coverage table
+    if (s.coverage) {
+      const cov = s.coverage;
+      if (cov.totalCount != null) {
+        out.push(
+          new Paragraph({
+            spacing: { before: 120, after: 80 },
+            children: [
+              new TextRun({ text: "Total facilities covered: ", bold: true }),
+              new TextRun({ text: String(cov.totalCount) }),
+            ],
+          })
+        );
+      }
+      if (cov.rows?.length) {
+        out.push(
+          makeDocxTable(
+            ["Facility Type", "Count", "Notes"],
+            cov.rows.map((r: any) => [
+              r.label ?? "",
+              r.count != null ? String(r.count) : "—",
+              r.description ?? "",
+            ])
+          )
+        );
+      }
+      if (cov.notes) out.push(...tiptapToDocxBlocks(cov.notes));
+    }
+
+    // Subsections (e.g., 3.1, 3.2)
+    s.subsections?.forEach((ss: any, j: number) => {
+      const number = ss.number ?? `${num}.${j + 1}`;
+      out.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 200, after: 100 },
+          children: [new TextRun({ text: `${number} ${ss.title}`, bold: true, size: 26 })],
+        })
+      );
+      out.push(...tiptapToDocxBlocks(ss.body));
+    });
   });
   return out;
 }
