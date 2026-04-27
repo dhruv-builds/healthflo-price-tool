@@ -591,22 +591,46 @@ function renderPrimitiveDocx(p: any): (Paragraph | Table)[] {
 
 function renderSignatoryDocx(sig: any): Paragraph[] {
   if (!sig) return [];
-  return [
+  const lines: Paragraph[] = [];
+  lines.push(
     new Paragraph({
-      spacing: { before: 400, after: 100 },
-      children: [new TextRun({ text: sig.legalName ?? "", bold: true })],
-    }),
+      spacing: { before: 200, after: 100 },
+      children: [new TextRun({ text: "For ", italics: true }), new TextRun({ text: sig.legalName ?? "", bold: true })],
+    })
+  );
+  lines.push(
     new Paragraph({
       spacing: { before: 600, after: 0 },
       border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 1 } },
       children: [new TextRun("")],
-    }),
-    new Paragraph({ children: [new TextRun({ text: sig.signatoryName ?? "" })] }),
-    new Paragraph({ children: [new TextRun({ text: sig.designation ?? "", italics: true })] }),
-    sig.date
-      ? new Paragraph({ children: [new TextRun({ text: `Date: ${sig.date}` })] })
-      : new Paragraph({ children: [new TextRun("")] }),
-  ];
+    })
+  );
+  lines.push(
+    new Paragraph({
+      spacing: { before: 80 },
+      children: [
+        new TextRun({ text: "Name: ", bold: true }),
+        new TextRun({ text: sig.signatoryName ?? "" }),
+      ],
+    })
+  );
+  lines.push(
+    new Paragraph({
+      children: [
+        new TextRun({ text: "Designation: ", bold: true }),
+        new TextRun({ text: sig.designation ?? "", italics: true }),
+      ],
+    })
+  );
+  lines.push(
+    new Paragraph({
+      children: [
+        new TextRun({ text: "Date: ", bold: true }),
+        new TextRun({ text: sig.date ?? "" }),
+      ],
+    })
+  );
+  return lines;
 }
 
 function renderSignaturePageDocx(sig: any): (Paragraph | Table)[] {
@@ -616,16 +640,28 @@ function renderSignaturePageDocx(sig: any): (Paragraph | Table)[] {
     new Paragraph({
       heading: HeadingLevel.HEADING_1,
       alignment: AlignmentType.CENTER,
-      spacing: { after: 400 },
+      spacing: { after: 200 },
       children: [new TextRun({ text: "Signatures", bold: true })],
     })
   );
+  if (sig.witnessClause) {
+    out.push(
+      new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 400 },
+        children: [new TextRun({ text: sig.witnessClause, italics: true })],
+      })
+    );
+  }
   if (sig.effectiveDate) {
     out.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: 400 },
-        children: [new TextRun({ text: `Effective Date: ${sig.effectiveDate}` })],
+        spacing: { after: 300 },
+        children: [
+          new TextRun({ text: "Effective Date: ", bold: true }),
+          new TextRun({ text: sig.effectiveDate }),
+        ],
       })
     );
   }
@@ -670,11 +706,40 @@ async function renderDocx(doc: DocumentDoc): Promise<Uint8Array> {
   if (doc.signature) children.push(...renderSignaturePageDocx(doc.signature));
   if (!children.length) children.push(new Paragraph({ children: [new TextRun(doc.meta?.title ?? "Document")] }));
 
+  const docTitle = doc.meta?.title ?? "Document";
   const document = new Document({
     creator: "HealthFlo",
-    title: doc.meta?.title ?? "Document",
+    title: docTitle,
     styles: {
       default: { document: { run: { font: "Calibri", size: 22 } } },
+    },
+    numbering: {
+      config: [
+        {
+          reference: "doc-bullets",
+          levels: [
+            {
+              level: 0,
+              format: LevelFormat.BULLET,
+              text: "\u2022",
+              alignment: AlignmentType.LEFT,
+              style: { paragraph: { indent: { left: 720, hanging: 360 } } },
+            },
+          ],
+        },
+        {
+          reference: "doc-numbers",
+          levels: [
+            {
+              level: 0,
+              format: LevelFormat.DECIMAL,
+              text: "%1.",
+              alignment: AlignmentType.LEFT,
+              style: { paragraph: { indent: { left: 720, hanging: 360 } } },
+            },
+          ],
+        },
+      ],
     },
     sections: [
       {
@@ -683,6 +748,21 @@ async function renderDocx(doc: DocumentDoc): Promise<Uint8Array> {
             size: { width: 12240, height: 15840, orientation: PageOrientation.PORTRAIT },
             margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
           },
+        },
+        footers: {
+          default: new Footer({
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: `${docTitle}  ·  Page `, size: 18, color: "808080" }),
+                  new TextRun({ children: [PageNumber.CURRENT], size: 18, color: "808080" }),
+                  new TextRun({ text: " of ", size: 18, color: "808080" }),
+                  new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 18, color: "808080" }),
+                ],
+              }),
+            ],
+          }),
         },
         children,
       },
