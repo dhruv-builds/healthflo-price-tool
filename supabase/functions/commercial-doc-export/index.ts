@@ -773,17 +773,53 @@ async function renderDocx(doc: DocumentDoc): Promise<Uint8Array> {
 }
 
 // ---------- PDF renderer (pdfmake) ----------
+// Walks tiptap and emits pdfmake content with native ul/ol nesting.
 function tiptapToPdfText(body?: TiptapDoc): any[] {
-  const paras = tiptapToPlainParagraphs(body);
-  return paras.map((runs) => ({
-    text: runs.map((r) => ({
-      text: r.text,
-      bold: r.marks.includes("bold"),
-      italics: r.marks.includes("italic"),
-      decoration: r.marks.includes("underline") ? "underline" : undefined,
-    })),
-    margin: [0, 0, 0, 6],
-  }));
+  if (!body) return [];
+  const out: any[] = [];
+  const inlineFromNode = (node: TiptapNode): any[] => {
+    const runs: any[] = [];
+    const walk = (n: TiptapNode) => {
+      if (n.type === "text") {
+        runs.push({
+          text: n.text ?? "",
+          bold: (n.marks ?? []).some((m) => m.type === "bold"),
+          italics: (n.marks ?? []).some((m) => m.type === "italic"),
+          decoration: (n.marks ?? []).some((m) => m.type === "underline") ? "underline" : undefined,
+        });
+      } else if (n.content) n.content.forEach(walk);
+    };
+    node.content?.forEach(walk);
+    return runs.length ? runs : [{ text: "" }];
+  };
+  const walkBlock = (node: TiptapNode) => {
+    if (!node) return;
+    if (node.type === "paragraph" || node.type === "heading") {
+      out.push({ text: inlineFromNode(node), margin: [0, 0, 0, 6] });
+    } else if (node.type === "bulletList") {
+      out.push({
+        ul: (node.content ?? []).map((li) => {
+          const runs: any[] = [];
+          li.content?.forEach((p) => runs.push(...inlineFromNode(p)));
+          return { text: runs };
+        }),
+        margin: [0, 0, 0, 6],
+      });
+    } else if (node.type === "orderedList") {
+      out.push({
+        ol: (node.content ?? []).map((li) => {
+          const runs: any[] = [];
+          li.content?.forEach((p) => runs.push(...inlineFromNode(p)));
+          return { text: runs };
+        }),
+        margin: [0, 0, 0, 6],
+      });
+    } else if (node.content) {
+      node.content.forEach(walkBlock);
+    }
+  };
+  body.content?.forEach(walkBlock);
+  return out.length ? out : [{ text: "" }];
 }
 
 function pdfTable(headers: string[], rows: string[][]): any {
