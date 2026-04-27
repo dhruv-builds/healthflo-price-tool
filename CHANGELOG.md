@@ -8,6 +8,18 @@ Every major entry **must** include a `Decisions` section explaining *why* the ch
 
 ---
 
+## [2026-04-27] Security — Pricing tables gated on approval
+
+### Security
+- Tightened RLS on `clients` and `versions` so SELECT/INSERT/UPDATE require `is_approved_user(auth.uid())` instead of just `authenticated`. Replaced the previous `Authenticated users can ...` policies with `Approved users can ...` equivalents.
+- Added `Admins can delete versions` policy (DELETE on `versions` was previously open to any authenticated user). `clients` DELETE was already admin-only and is unchanged.
+
+### Decisions
+- Aligns the pricing module with the same gate used by CRM and Workflow modules — unapproved/pending users should not be able to read or modify pricing data, which contains commercial/cost information.
+- DELETE on `versions` raised to admin-only to match `clients` and prevent accidental loss of pricing history by employees.
+
+---
+
 ## [2026-04-27] Workflow module — Phase 5 (Pricing linking prompt + Seed Review)
 
 ### Added
