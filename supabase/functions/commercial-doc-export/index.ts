@@ -521,11 +521,18 @@ function renderPrimitiveDocx(p: any): (Paragraph | Table)[] {
       return p.items.map((item: TiptapDoc) => {
         const runs = tiptapToPlainParagraphs(item)[0] ?? [];
         return new Paragraph({
-          children: [
-            new TextRun(p.kind === "bullets" ? "• " : "1. "),
-            ...runs.map((r) => new TextRun({ text: r.text, bold: r.marks.includes("bold") })),
-          ],
-          indent: { left: 720, hanging: 360 },
+          numbering: {
+            reference: p.kind === "bullets" ? "doc-bullets" : "doc-numbers",
+            level: 0,
+          },
+          children: runs.map(
+            (r) =>
+              new TextRun({
+                text: r.text,
+                bold: r.marks.includes("bold"),
+                italics: r.marks.includes("italic"),
+              })
+          ),
         });
       });
     case "callout":
