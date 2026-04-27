@@ -11,7 +11,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Pencil, UserPlus, MessageSquarePlus, ListPlus, TrendingUp, FileText, ExternalLink, Link } from "lucide-react";
+import { ArrowLeft, Pencil, UserPlus, MessageSquarePlus, ListPlus, TrendingUp, FileText, ExternalLink, Link, FileSignature } from "lucide-react";
+import { CommercialDocsPanel } from "@/components/commercial/CommercialDocsPanel";
 import { StatusBadgeDropdown } from "@/components/crm/StatusBadgeDropdown";
 import { AccountForm } from "@/components/crm/AccountForm";
 import { ContactsList } from "@/components/crm/ContactsList";
@@ -119,6 +120,7 @@ export default function AccountDetail() {
           <TabsTrigger value="opportunity">Opportunity ({opportunities.length})</TabsTrigger>
           <TabsTrigger value="tasks">Tasks ({tasks.length})</TabsTrigger>
           <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
+          <TabsTrigger value="commercial"><FileSignature className="mr-1 h-3.5 w-3.5" />Commercial Docs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="workflow" className="mt-4">
@@ -143,6 +145,14 @@ export default function AccountDetail() {
 
         <TabsContent value="documents" className="mt-4">
           <DocumentsSection documents={documents} accountId={account.id} isLoading={docsLoading} onAdd={() => setShowDocForm(true)} />
+        </TabsContent>
+
+        <TabsContent value="commercial" className="mt-4">
+          <CommercialDocsPanel
+            accountId={account.id}
+            accountName={account.name}
+            defaultLinkedClientId={account.linked_client_id}
+          />
         </TabsContent>
       </Tabs>
 
