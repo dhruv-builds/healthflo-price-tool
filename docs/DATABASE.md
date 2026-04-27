@@ -72,10 +72,10 @@ Key columns: `id`, `account_id`, `name`, `stage` (`crm_opp_stage`), `expected_va
 
 ## Row-Level Security (RLS)
 
-RLS is enabled on every public table. Policies use `auth.uid()` and `public.has_role(...)` to enforce:
+RLS is enabled on every public table. Policies use `auth.uid()`, `public.is_approved_user(...)`, and `public.has_role(...)` to enforce:
 
-- Authenticated + approved users can read/write their own data.
-- `admin` users can read/write all rows including unit economics, user roles, and approvals.
+- Authenticated **and approved** users can read/write CRM, Workflow, and Pricing (`clients`, `versions`) data.
+- `admin` users can read/write all rows including unit economics, user roles, approvals, and can DELETE pricing clients and versions.
 - `employee` users cannot read cost / margin columns (enforced at the query layer in pricing).
 
 ## Foreign keys
