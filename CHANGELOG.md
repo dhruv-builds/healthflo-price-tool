@@ -8,6 +8,39 @@ Every major entry **must** include a `Decisions` section explaining *why* the ch
 
 ---
 
+## [2026-04-27] Workflow module (MVP)
+
+### Added
+- New **Workflow** module at `/crm/workflows` with List, My Queue, Needs Attention, and Board views.
+- Embedded **Workflow** tab inside `AccountDetail` (becomes the default tab when a workflow exists; "Initialize Workflow" empty state otherwise).
+- Workflow Panel surfaces stage, next action, blocker, pricing reference (linked client + reference version), per-stage checklist, and stage history.
+- New Supabase tables: `workflow_records` (one active per `account_id`), `workflow_collaborators`, `workflow_checklist_items`, `workflow_stage_history`, `workflow_stage_suggestions`, with matching RLS following the existing CRM `is_approved_user` pattern.
+- New enums: `workflow_stage`, `workflow_blocker_type`, `workflow_suggestion_status`, `workflow_seed_confidence`.
+- DB helper `seed_default_checklist(uuid)` populates a per-stage checklist on workflow init.
+- Validation trigger requires `blocker_reason` whenever `is_blocked = true`.
+- New hooks: `useWorkflowRecords`, `useWorkflowMutations`, `useWorkflowChecklist`. New types in `src/types/workflow.ts` (incl. deterministic `getAttentionReasons`).
+- New components: `WorkflowPanel`, `WorkflowList`, `WorkflowBoard`, `WorkflowChecklist`, `WorkflowStageModal`, `WorkflowStageBadge`.
+
+### Decisions
+- **Workflow stage is separate from `crm_accounts.status`.** Account status remains the high-level lifecycle/business state; workflow stage is the *operational* progression and lives on its own table.
+- **One active workflow per account** enforced by a `UNIQUE` constraint on `workflow_records.account_id`. Avoids ambiguity in MVP; multi-workflow can be modeled later if needed.
+- **Manual stage changes only** — no auto-advance. Suggestions are scaffolded (table + status enum) but the UI today only supports manual changes via `WorkflowStageModal`, with incomplete required checklist items shown as a soft warning, not a block.
+- **Checklist ≠ Tasks.** Checklist items represent readiness conditions stored in `workflow_checklist_items`. CRM Tasks remain the assigned-action layer and are reachable via "Create Task" from the workflow panel (reuses existing `TaskForm`).
+- **Pricing untouched in this iteration.** Workflow links to an existing pricing client and lets the user pin a single reference version via dropdown. The planned first-save Pricing linking prompt and the seed-review utility are deferred to a follow-up entry to keep this change reviewable.
+- **Validation via trigger, not CHECK.** The blocker-reason rule uses a `BEFORE INSERT/UPDATE` trigger so it remains restoreable and editable, consistent with the project's "no time-based CHECK constraints" guidance.
+- **No new FK to CRM tables from workflow rows** (account/client/version), matching the existing CRM convention; integrity is validated in code.
+- **Attention rules are deterministic** (overdue / missing next action / blocked / stage stale > 14d / missing pricing reference for Pricing-family stages). Computed in the client, no fuzzy scoring.
+
+### Changed
+- `CrmLayout` nav now includes a **Workflow** entry between Tasks/Reports and Accounts.
+- `AccountDetail` Tabs now include a **Workflow** tab, set as the default when a workflow record exists for the account.
+- `App.tsx` registers the new `/crm/workflows` route under the existing CRM layout.
+
+### Docs
+- `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/UX_FLOWS.md`, and `docs/TECH_DEBT.md` updated to cover the Workflow module.
+
+---
+
 ## [2026-04-27] In-repo documentation + changelog
 
 ### Added
