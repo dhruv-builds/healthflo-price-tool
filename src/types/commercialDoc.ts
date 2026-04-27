@@ -234,7 +234,12 @@ export interface SignaturePage {
   partyB: SignatoryBlock;
   effectiveDate?: string;
   closingNote?: string;
+  /** Formal witness clause printed above the signature blocks. */
+  witnessClause?: string;
 }
+
+export const DEFAULT_WITNESS_CLAUSE =
+  "IN WITNESS WHEREOF, the parties hereto have executed this Memorandum of Understanding as of the date first written below.";
 
 // ---------- Top-level document ----------
 export interface DocumentMeta {
