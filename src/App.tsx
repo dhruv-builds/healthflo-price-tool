@@ -15,6 +15,7 @@ import CrmHome from "./pages/crm/CrmHome";
 import AccountDetail from "./pages/crm/AccountDetail";
 import TasksPage from "./pages/crm/TasksPage";
 import ReportsPage from "./pages/crm/ReportsPage";
+import WorkflowPage from "./pages/crm/WorkflowPage";
 
 const queryClient = new QueryClient();
 
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="/crm" element={<CrmLayout />}>
                 <Route index element={<CrmHome />} />
                 <Route path="accounts/:id" element={<AccountDetail />} />
+                <Route path="workflows" element={<WorkflowPage />} />
                 <Route path="tasks" element={<TasksPage />} />
                 <Route path="reports" element={<ReportsPage />} />
               </Route>
