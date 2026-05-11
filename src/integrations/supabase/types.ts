@@ -218,6 +218,48 @@ export type Database = {
         }
         Relationships: []
       }
+      commercial_logos: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          created_by: string
+          file_path: string
+          id: string
+          kind: Database["public"]["Enums"]["commercial_logo_kind"]
+          label: string
+          natural_height: number | null
+          natural_width: number | null
+          scope: Database["public"]["Enums"]["commercial_logo_scope"]
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          created_by: string
+          file_path: string
+          id?: string
+          kind?: Database["public"]["Enums"]["commercial_logo_kind"]
+          label: string
+          natural_height?: number | null
+          natural_width?: number | null
+          scope: Database["public"]["Enums"]["commercial_logo_scope"]
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          created_by?: string
+          file_path?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["commercial_logo_kind"]
+          label?: string
+          natural_height?: number | null
+          natural_width?: number | null
+          scope?: Database["public"]["Enums"]["commercial_logo_scope"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       commercial_template_versions: {
         Row: {
           created_at: string
@@ -1062,6 +1104,8 @@ export type Database = {
         | "auto_from_pricing"
         | "structure_only"
         | "selective_fill"
+      commercial_logo_kind: "vendor" | "client" | "partner" | "other"
+      commercial_logo_scope: "global" | "account"
       commercial_template_scope: "global" | "account"
       commercial_template_status: "draft" | "published" | "archived"
       crm_account_status:
@@ -1254,6 +1298,8 @@ export const Constants = {
         "structure_only",
         "selective_fill",
       ],
+      commercial_logo_kind: ["vendor", "client", "partner", "other"],
+      commercial_logo_scope: ["global", "account"],
       commercial_template_scope: ["global", "account"],
       commercial_template_status: ["draft", "published", "archived"],
       crm_account_status: [

@@ -57,9 +57,50 @@ export interface PartyBlock {
   tagline?: string;
 }
 
+// Logo placement ----------------------------------------------------------
+export type LogoZone = "cover" | "header" | "footer";
+
+/**
+ * Free-placement logo on a document zone. Coordinates are percentages of the
+ * zone's content box (page minus margins for cover; header/footer band for the
+ * other zones) so layout survives any page size at export time.
+ *
+ * `logoId` references commercial_logos.id when picked from the library. For
+ * legacy auto-migrated logos the `filePath` is set directly so the export
+ * function can fetch the file without a library row.
+ */
+export interface LogoPlacement {
+  id: string;
+  logoId?: string;
+  filePath?: string;
+  zone: LogoZone;
+  /** Top-left anchor, 0–100 % of the zone's content box. */
+  xPct: number;
+  yPct: number;
+  /** Width as % of zone's content width; height derives from natural aspect. */
+  widthPct: number;
+  rotation?: number;
+  opacity?: number;
+  zIndex?: number;
+  /** Cached aspect ratio (w/h) so the editor can render before fetching. */
+  aspectRatio?: number;
+}
+
+export interface PageHeaderConfig {
+  placements: LogoPlacement[];
+  /** Whether to also draw header logos on the cover page. */
+  showOnCover?: boolean;
+}
+export interface PageFooterConfig {
+  placements: LogoPlacement[];
+  watermarkOpacity?: number;
+}
+
 export interface CoverPage {
   variant: CoverVariant;
+  /** @deprecated Use `logoPlacements` (auto-migrated on load). */
   vendorLogoRef?: string;
+  /** @deprecated Use `logoPlacements` (auto-migrated on load). */
   clientLogoRef?: string;
   title: string;
   subtitle?: string;
@@ -69,6 +110,8 @@ export interface CoverPage {
   spacing: CoverSpacing;
   /** Place where the document is being executed (e.g., "Dehradun, Uttarakhand, India"). */
   executionLocation?: string;
+  /** Free-placement logos on the cover. */
+  logoPlacements?: LogoPlacement[];
 }
 
 // ---------- Facility coverage (Scope of Work · 3.2) ----------
@@ -256,6 +299,60 @@ export interface DocumentDoc {
   sections?: Section[];
   blocks?: Block[];
   signature?: SignaturePage;
+  /** Logos repeated on every non-cover page (or all pages if showOnCover). */
+  pageHeader?: PageHeaderConfig;
+  /** Logos repeated in the footer on every page (e.g. faint vendor watermark). */
+  footer?: PageFooterConfig;
+}
+
+// ---------- Logo library row (mirrors public.commercial_logos) ----------
+export type LogoLibraryScope = "global" | "account";
+export type LogoLibraryKind = "vendor" | "client" | "partner" | "other";
+export interface LogoLibraryItem {
+  id: string;
+  scope: LogoLibraryScope;
+  account_id: string | null;
+  label: string;
+  file_path: string;
+  kind: LogoLibraryKind;
+  natural_width?: number | null;
+  natural_height?: number | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Backfill `logoPlacements` from the legacy `vendorLogoRef`/`clientLogoRef`
+ * file paths so existing documents render in the new pipeline. Idempotent.
+ */
+export function migrateLegacyCoverLogos(doc: DocumentDoc): DocumentDoc {
+  if (!doc.cover) return doc;
+  const cover = doc.cover;
+  if (cover.logoPlacements && cover.logoPlacements.length > 0) return doc;
+  const placements: LogoPlacement[] = [];
+  if (cover.vendorLogoRef) {
+    placements.push({
+      id: newId(),
+      filePath: cover.vendorLogoRef,
+      zone: "cover",
+      xPct: 8,
+      yPct: 12,
+      widthPct: 28,
+    });
+  }
+  if (cover.clientLogoRef) {
+    placements.push({
+      id: newId(),
+      filePath: cover.clientLogoRef,
+      zone: "cover",
+      xPct: 8,
+      yPct: 50,
+      widthPct: 28,
+    });
+  }
+  if (placements.length === 0) return doc;
+  return { ...doc, cover: { ...cover, logoPlacements: placements } };
 }
 
 // ---------- Account profile ----------
