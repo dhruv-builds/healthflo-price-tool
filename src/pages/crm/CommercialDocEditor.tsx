@@ -225,6 +225,11 @@ export default function CommercialDocEditor() {
           {content.cover && (
             <CoverEditor cover={content.cover} onChange={(c) => update((p) => ({ ...p, cover: c }))} />
           )}
+          <BrandingPanel
+            accountId={accountId ?? null}
+            doc={content}
+            onChange={(next) => update(() => next)}
+          />
           {content.sections?.map((s, i) => (
             <SectionEditor
               key={s.id}
