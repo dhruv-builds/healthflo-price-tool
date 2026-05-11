@@ -299,6 +299,60 @@ export interface DocumentDoc {
   sections?: Section[];
   blocks?: Block[];
   signature?: SignaturePage;
+  /** Logos repeated on every non-cover page (or all pages if showOnCover). */
+  pageHeader?: PageHeaderConfig;
+  /** Logos repeated in the footer on every page (e.g. faint vendor watermark). */
+  footer?: PageFooterConfig;
+}
+
+// ---------- Logo library row (mirrors public.commercial_logos) ----------
+export type LogoLibraryScope = "global" | "account";
+export type LogoLibraryKind = "vendor" | "client" | "partner" | "other";
+export interface LogoLibraryItem {
+  id: string;
+  scope: LogoLibraryScope;
+  account_id: string | null;
+  label: string;
+  file_path: string;
+  kind: LogoLibraryKind;
+  natural_width?: number | null;
+  natural_height?: number | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Backfill `logoPlacements` from the legacy `vendorLogoRef`/`clientLogoRef`
+ * file paths so existing documents render in the new pipeline. Idempotent.
+ */
+export function migrateLegacyCoverLogos(doc: DocumentDoc): DocumentDoc {
+  if (!doc.cover) return doc;
+  const cover = doc.cover;
+  if (cover.logoPlacements && cover.logoPlacements.length > 0) return doc;
+  const placements: LogoPlacement[] = [];
+  if (cover.vendorLogoRef) {
+    placements.push({
+      id: newId(),
+      filePath: cover.vendorLogoRef,
+      zone: "cover",
+      xPct: 8,
+      yPct: 12,
+      widthPct: 28,
+    });
+  }
+  if (cover.clientLogoRef) {
+    placements.push({
+      id: newId(),
+      filePath: cover.clientLogoRef,
+      zone: "cover",
+      xPct: 8,
+      yPct: 50,
+      widthPct: 28,
+    });
+  }
+  if (placements.length === 0) return doc;
+  return { ...doc, cover: { ...cover, logoPlacements: placements } };
 }
 
 // ---------- Account profile ----------
