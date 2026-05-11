@@ -11,7 +11,10 @@ import {
   BorderStyle,
   Document,
   Footer,
+  Header,
   HeadingLevel,
+  HorizontalPositionAlign,
+  HorizontalPositionRelativeFrom,
   ImageRun,
   LevelFormat,
   PageBreak,
@@ -24,6 +27,10 @@ import {
   TableCell,
   TableRow,
   TextRun,
+  TextWrappingType,
+  TextWrappingSide,
+  VerticalPositionAlign,
+  VerticalPositionRelativeFrom,
   WidthType,
 } from "npm:docx@9.0.2";
 import pdfMake from "npm:pdfmake@0.2.10/build/pdfmake.js";
