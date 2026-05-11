@@ -67,7 +67,7 @@ export default function CommercialDocEditor() {
 
   useEffect(() => {
     if (doc && !content) {
-      setContent(doc.content_json);
+      setContent(migrateLegacyCoverLogos(doc.content_json as DocumentDoc));
       setTitle(doc.title);
       setStatus(doc.status);
     }
