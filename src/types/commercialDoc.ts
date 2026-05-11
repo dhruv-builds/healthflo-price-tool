@@ -57,9 +57,50 @@ export interface PartyBlock {
   tagline?: string;
 }
 
+// Logo placement ----------------------------------------------------------
+export type LogoZone = "cover" | "header" | "footer";
+
+/**
+ * Free-placement logo on a document zone. Coordinates are percentages of the
+ * zone's content box (page minus margins for cover; header/footer band for the
+ * other zones) so layout survives any page size at export time.
+ *
+ * `logoId` references commercial_logos.id when picked from the library. For
+ * legacy auto-migrated logos the `filePath` is set directly so the export
+ * function can fetch the file without a library row.
+ */
+export interface LogoPlacement {
+  id: string;
+  logoId?: string;
+  filePath?: string;
+  zone: LogoZone;
+  /** Top-left anchor, 0–100 % of the zone's content box. */
+  xPct: number;
+  yPct: number;
+  /** Width as % of zone's content width; height derives from natural aspect. */
+  widthPct: number;
+  rotation?: number;
+  opacity?: number;
+  zIndex?: number;
+  /** Cached aspect ratio (w/h) so the editor can render before fetching. */
+  aspectRatio?: number;
+}
+
+export interface PageHeaderConfig {
+  placements: LogoPlacement[];
+  /** Whether to also draw header logos on the cover page. */
+  showOnCover?: boolean;
+}
+export interface PageFooterConfig {
+  placements: LogoPlacement[];
+  watermarkOpacity?: number;
+}
+
 export interface CoverPage {
   variant: CoverVariant;
+  /** @deprecated Use `logoPlacements` (auto-migrated on load). */
   vendorLogoRef?: string;
+  /** @deprecated Use `logoPlacements` (auto-migrated on load). */
   clientLogoRef?: string;
   title: string;
   subtitle?: string;
@@ -69,6 +110,8 @@ export interface CoverPage {
   spacing: CoverSpacing;
   /** Place where the document is being executed (e.g., "Dehradun, Uttarakhand, India"). */
   executionLocation?: string;
+  /** Free-placement logos on the cover. */
+  logoPlacements?: LogoPlacement[];
 }
 
 // ---------- Facility coverage (Scope of Work · 3.2) ----------
