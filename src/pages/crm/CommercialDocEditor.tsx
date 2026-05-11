@@ -615,3 +615,79 @@ function Field({ label, value, onChange, multiline }: { label: string; value: st
     </div>
   );
 }
+
+// ----- Branding panel (free-placement logos for cover/header/footer) -----
+function BrandingPanel({
+  accountId,
+  doc,
+  onChange,
+}: {
+  accountId: string | null;
+  doc: DocumentDoc;
+  onChange: (next: DocumentDoc) => void;
+}) {
+  const coverPlacements = doc.cover?.logoPlacements ?? [];
+  const headerPlacements = doc.pageHeader?.placements ?? [];
+  const footerPlacements = doc.footer?.placements ?? [];
+
+  return (
+    <Card className="p-4 space-y-4">
+      <div>
+        <div className="text-sm font-semibold">Branding & logo placement</div>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Pick from the logo library and drag to position. Cover canvas matches a US-Letter page;
+          header/footer bands repeat on every page in the export.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-2">
+          {doc.cover && (
+            <LogoCanvas
+              zone="cover"
+              zoneAspect={8.5 / 11}
+              label="Cover page logos"
+              accountId={accountId}
+              placements={coverPlacements}
+              onChange={(next) =>
+                onChange({ ...doc, cover: { ...doc.cover!, logoPlacements: next } })
+              }
+            />
+          )}
+        </div>
+        <LogoCanvas
+          zone="header"
+          zoneAspect={8.5 / 1.0}
+          label="Page header (every page)"
+          accountId={accountId}
+          placements={headerPlacements}
+          onChange={(next) =>
+            onChange({
+              ...doc,
+              pageHeader: {
+                showOnCover: doc.pageHeader?.showOnCover ?? false,
+                placements: next,
+              },
+            })
+          }
+        />
+        <LogoCanvas
+          zone="footer"
+          zoneAspect={8.5 / 1.0}
+          label="Page footer watermark"
+          accountId={accountId}
+          placements={footerPlacements}
+          onChange={(next) =>
+            onChange({
+              ...doc,
+              footer: {
+                watermarkOpacity: doc.footer?.watermarkOpacity ?? 0.15,
+                placements: next,
+              },
+            })
+          }
+        />
+      </div>
+    </Card>
+  );
+}
