@@ -35,7 +35,10 @@ import {
   computeUnresolvedFields,
   newId,
   emptyTiptap,
+  migrateLegacyCoverLogos,
+  type LogoPlacement,
 } from "@/types/commercialDoc";
+import { LogoCanvas } from "@/components/commercial/LogoCanvas";
 import {
   useCommercialDocument,
   useDocumentExports,
